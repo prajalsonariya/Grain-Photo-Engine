@@ -1,27 +1,27 @@
 import Header from '@/components/Header';
-import { getFolderImages, getFolderDetails } from '@/lib/drive';
+import { getFolderImages, getFolderDetails, getConfig } from '@/lib/drive';
 import GalleryClient from './GalleryClient';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
 
-export const revalidate = 60; // revalidate every minute
+export const revalidate = 60;
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const folder = await getFolderDetails(id);
   return {
-    title: folder ? `${folder.name} | Prajal Sonariya` : 'Gallery | Prajal Sonariya'
+    title: folder ? `${folder.name} | Gallery` : 'Gallery',
   };
 }
 
 export default async function GalleryPage({ params }) {
   const { id } = await params;
-  
-  // Load folder data — if the folder ID doesn't exist in Drive, getFolderDetails returns null
-  const [{ images, subfolders }, folder] = await Promise.all([
+
+  const [{ images, subfolders }, folder, config] = await Promise.all([
     getFolderImages(id),
-    getFolderDetails(id)
+    getFolderDetails(id),
+    getConfig(),
   ]);
 
   if (!folder) {
@@ -41,7 +41,11 @@ export default async function GalleryPage({ params }) {
             {folder?.name || 'Gallery'}
           </h1>
         </div>
-        <GalleryClient initialImages={images} initialSubfolders={subfolders} />
+        <GalleryClient
+          initialImages={images}
+          initialSubfolders={subfolders}
+          whatsapp={config.whatsapp}
+        />
       </div>
     </main>
   );

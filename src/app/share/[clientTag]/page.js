@@ -1,5 +1,5 @@
 import Header from '@/components/Header';
-import { getFolderImages, getFolderDetails } from '@/lib/drive';
+import { getFolderImages, getFolderDetails, getConfig } from '@/lib/drive';
 import GalleryClient from '@/app/gallery/[id]/GalleryClient';
 import { notFound } from 'next/navigation';
 
@@ -8,23 +8,23 @@ export const revalidate = 0; // Dynamic route
 export async function generateMetadata({ params }) {
   const { clientTag } = await params;
   const folder = await getFolderDetails(clientTag);
-  
+
   return {
-    title: folder ? `${folder.name} | Client Gallery` : 'Client Gallery | Prajal Sonariya',
+    title: folder ? `${folder.name} | Client Gallery` : 'Client Gallery',
     robots: {
       index: false,
       follow: false,
-    }
+    },
   };
 }
 
 export default async function SharePage({ params }) {
   const { clientTag } = await params;
-  
-  // Load folder — if the ID doesn't exist in Drive, getFolderDetails returns null → 404
-  const [{ images, subfolders }, folder] = await Promise.all([
+
+  const [{ images, subfolders }, folder, config] = await Promise.all([
     getFolderImages(clientTag),
-    getFolderDetails(clientTag)
+    getFolderDetails(clientTag),
+    getConfig(),
   ]);
 
   if (!folder) {
@@ -43,7 +43,12 @@ export default async function SharePage({ params }) {
             {folder?.name || 'Client Gallery'}
           </h1>
         </div>
-        <GalleryClient initialImages={images} initialSubfolders={subfolders} basePath="/share" />
+        <GalleryClient
+          initialImages={images}
+          initialSubfolders={subfolders}
+          basePath="/share"
+          whatsapp={config.whatsapp}
+        />
       </div>
     </main>
   );

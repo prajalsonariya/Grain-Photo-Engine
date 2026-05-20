@@ -282,6 +282,83 @@ export async function getFolderDetails(folderId) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Config service — reads config.json from the private Drive root folder
+// ---------------------------------------------------------------------------
+
+function getDefaultConfig() {
+  return {
+    photographers: ['Studio'],
+    businessName: null,
+    heroTitle: 'Albums',
+    whatsapp: null,
+    socials: {},
+  };
+}
+
+export const getConfig = cache(async () => {
+  const rootFolderId = process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID;
+
+  if (!rootFolderId || rootFolderId === 'your_private_folder_id_here') {
+    return getDefaultConfig();
+  }
+
+  try {
+    const drive = google.drive({ version: 'v3', auth: getAuth() });
+
+    // Find config.json in the private root
+    const searchRes = await drive.files.list({
+      q: `'${rootFolderId}' in parents and name = 'config.json' and mimeType = 'application/json' and trashed = false`,
+      fields: 'files(id, name)',
+      pageSize: 1,
+    });
+
+    const files = searchRes.data.files || [];
+
+    // Fallback: also accept plain-text JSON files named config.json
+    if (files.length === 0) {
+      const fallbackSearch = await drive.files.list({
+        q: `'${rootFolderId}' in parents and name = 'config.json' and trashed = false`,
+        fields: 'files(id, name)',
+        pageSize: 1,
+      });
+      if ((fallbackSearch.data.files || []).length === 0) return getDefaultConfig();
+      files.push(...fallbackSearch.data.files);
+    }
+
+    const fileId = files[0].id;
+
+    // Download file content as text
+    const response = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'arraybuffer' }
+    );
+
+    const text = Buffer.from(response.data).toString('utf-8');
+    const raw = JSON.parse(text);
+
+    return {
+      photographers: Array.isArray(raw.photographers) && raw.photographers.length > 0
+        ? raw.photographers
+        : ['Studio'],
+      businessName: typeof raw.businessName === 'string' && raw.businessName.trim()
+        ? raw.businessName.trim()
+        : null,
+      heroTitle: typeof raw.heroTitle === 'string' && raw.heroTitle.trim()
+        ? raw.heroTitle.trim()
+        : 'Albums',
+      whatsapp: typeof raw.whatsapp === 'string' && raw.whatsapp.trim()
+        ? raw.whatsapp.trim()
+        : null,
+      socials: raw.socials && typeof raw.socials === 'object' ? raw.socials : {},
+    };
+  } catch (err) {
+    console.error('[getConfig] Failed to load config.json from Drive:', err.message);
+    return getDefaultConfig();
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Check if a folder ID exists anywhere inside the private root.
 // Uses a recursive Drive query — reliable, single API call, no parent traversal.
 export async function isFolderInPrivateRoot(folderId) {

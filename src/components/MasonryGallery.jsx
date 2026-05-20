@@ -44,7 +44,7 @@ export default function MasonryGallery({ images, onImageClick, selectionMode, se
                  alt={image.description || image.name}
                  loading={index < 6 ? "eager" : "lazy"}
                  decoding="async"
-                 fetchpriority={index < 6 ? "high" : "auto"}
+                 fetchPriority={index < 6 ? "high" : "auto"}
                  className={`absolute inset-0 w-full h-full object-cover transition-all duration-200 ease-out ${
                    isSelected 
                      ? 'brightness-75' 

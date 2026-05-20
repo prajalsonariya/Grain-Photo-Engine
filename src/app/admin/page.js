@@ -30,6 +30,7 @@ export default async function AdminPage() {
           publicFolders={publicFolders} 
           privateFolders={privateFolders} 
           isLimitReached={isLimitReached}
+          limit={isAgency ? null : 3}
         />
       </div>
     </main>

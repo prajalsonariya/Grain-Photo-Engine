@@ -20,7 +20,7 @@ async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
   const options = {
     q: `'${rootFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
     fields: 'files(id, name, createdTime)',
-    orderBy: 'createdTime desc',
+    orderBy: 'createdTime',
   };
   if (limit) {
     options.pageSize = limit + 1;

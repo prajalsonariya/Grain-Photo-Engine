@@ -45,7 +45,7 @@ function FolderRow({ folder, handleCopy, copiedId, basePath }) {
   );
 }
 
-export default function AdminClient({ publicFolders, privateFolders, isLimitReached }) {
+export default function AdminClient({ publicFolders, privateFolders, isLimitReached, limit }) {
   const [copiedId, setCopiedId] = useState(null);
 
   const handleCopy = async (folderId, basePath) => {
@@ -84,7 +84,14 @@ export default function AdminClient({ publicFolders, privateFolders, isLimitReac
       </section>
 
       <section>
-        <h2 className="text-xl font-bold text-white mb-4 tracking-wider uppercase border-b border-white/10 pb-2">Private Folders</h2>
+        <h2 className="text-xl font-bold text-white mb-4 tracking-wider uppercase border-b border-white/10 pb-2 flex items-center">
+          Private Folders
+          {limit && (
+            <span className="ml-3 text-sm font-medium text-neutral-500 normal-case tracking-normal">
+              ({privateFolders.length}/{limit})
+            </span>
+          )}
+        </h2>
         {privateFolders.length === 0 ? (
           <div className="p-8 border border-white/10 rounded-sm bg-neutral-900/30 text-center text-neutral-500">
             No private folders found. Ensure your private root ID is correct.

@@ -13,21 +13,31 @@ function WhatsAppIcon({ className }) {
   );
 }
 
-export default function Lightbox({ images, currentIndex, onClose, onNext, onPrev, whatsapp }) {
+export default function Lightbox({ images, currentIndex, onClose, onIndexChange, whatsapp }) {
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [showOriginal, setShowOriginal] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const handleNext = useCallback(() => {
+    setShowOriginal(false);
+    onIndexChange((currentIndex + 1) % images.length);
+  }, [currentIndex, images.length, onIndexChange]);
+
+  const handlePrev = useCallback(() => {
+    setShowOriginal(false);
+    onIndexChange((currentIndex - 1 + images.length) % images.length);
+  }, [currentIndex, images.length, onIndexChange]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowRight') { setShowOriginal(false); onNext(); }
-      if (e.key === 'ArrowLeft') { setShowOriginal(false); onPrev(); }
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'ArrowLeft') handlePrev();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, onNext, onPrev]);
+  }, [onClose, handleNext, handlePrev]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -51,14 +61,16 @@ export default function Lightbox({ images, currentIndex, onClose, onNext, onPrev
     const isLeftSwipe = distance > 50;
     const isRightSwipe = distance < -50;
 
-    if (isLeftSwipe) { setShowOriginal(false); onNext(); }
-    if (isRightSwipe) { setShowOriginal(false); onPrev(); }
+    if (isLeftSwipe) handleNext();
+    if (isRightSwipe) handlePrev();
   };
 
   // Share to WhatsApp — copies formatted message + page URL to clipboard
   const handleShareToWhatsApp = useCallback(async () => {
-    const pageUrl = window.location.href;
-    const message = `📸 Check out this gallery!\n${pageUrl}`;
+    const baseUrl = window.location.origin + window.location.pathname;
+    const currentImage = images[currentIndex];
+    const shareUrl = currentImage ? `${baseUrl}?img=${currentImage.id}` : window.location.href;
+    const message = `📸 Check out this gallery!\n${shareUrl}`;
     try {
       await navigator.clipboard.writeText(message);
       setCopied(true);
@@ -77,7 +89,7 @@ export default function Lightbox({ images, currentIndex, onClose, onNext, onPrev
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  }, []);
+  }, [images, currentIndex]);
 
   const image = images[currentIndex];
   if (!image) return null;
@@ -108,14 +120,14 @@ export default function Lightbox({ images, currentIndex, onClose, onNext, onPrev
       >
 
         <button
-          onClick={() => { setShowOriginal(false); onPrev(); }}
+          onClick={handlePrev}
           className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 z-50 text-white/30 hover:text-white transition-all duration-150 p-4 hidden sm:block"
         >
           <ChevronLeft className="w-8 h-8" />
         </button>
 
         <button
-          onClick={() => { setShowOriginal(false); onNext(); }}
+          onClick={handleNext}
           className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 z-50 text-white/30 hover:text-white transition-all duration-150 p-4 hidden sm:block"
         >
           <ChevronRight className="w-8 h-8" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import MasonryGallery from '@/components/MasonryGallery';
@@ -20,6 +20,20 @@ export default function GalleryClient({ initialImages, initialSubfolders = [], b
   // Selection state
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+
+  // Updates the browser URL with ?img=... without triggering page refreshes
+  const updateUrlForImage = useCallback((index, currentSortedImages) => {
+    const params = new URLSearchParams(window.location.search);
+    const targetImages = currentSortedImages || [];
+    if (index !== null && targetImages[index]) {
+      params.set('img', targetImages[index].id);
+    } else {
+      params.delete('img');
+    }
+    const newSearch = params.toString();
+    const newPath = window.location.pathname + (newSearch ? `?${newSearch}` : '');
+    window.history.replaceState(null, '', newPath);
+  }, []);
 
   const sortedSubfolders = useMemo(() => {
     return [...initialSubfolders].sort((a, b) => {
@@ -41,6 +55,26 @@ export default function GalleryClient({ initialImages, initialSubfolders = [], b
       return 0;
     });
   }, [images, sortOrder]);
+
+  // Sync state with URL search param on load or back/forward navigation
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const params = new URLSearchParams(window.location.search);
+      const imgId = params.get('img');
+      if (imgId) {
+        const idx = sortedImages.findIndex(img => img.id === imgId);
+        if (idx !== -1) {
+          setSelectedIndex(idx);
+          return;
+        }
+      }
+      setSelectedIndex(null);
+    };
+
+    handleUrlChange();
+    window.addEventListener('popstate', handleUrlChange);
+    return () => window.removeEventListener('popstate', handleUrlChange);
+  }, [sortedImages]);
 
   const toggleSelect = useCallback((id) => {
     setSelectedIds(prev => {
@@ -186,7 +220,10 @@ export default function GalleryClient({ initialImages, initialSubfolders = [], b
 
           <MasonryGallery 
             images={sortedImages} 
-            onImageClick={(idx) => setSelectedIndex(idx)}
+            onImageClick={(idx) => {
+              setSelectedIndex(idx);
+              updateUrlForImage(idx, sortedImages);
+            }}
             selectionMode={selectionMode}
             selectedIds={selectedIds}
             onToggleSelect={toggleSelect}
@@ -198,9 +235,14 @@ export default function GalleryClient({ initialImages, initialSubfolders = [], b
         <Lightbox 
           images={sortedImages}
           currentIndex={selectedIndex}
-          onClose={() => setSelectedIndex(null)} 
-          onNext={() => setSelectedIndex((prev) => (prev + 1) % sortedImages.length)}
-          onPrev={() => setSelectedIndex((prev) => (prev - 1 + sortedImages.length) % sortedImages.length)}
+          onClose={() => {
+            setSelectedIndex(null);
+            updateUrlForImage(null, sortedImages);
+          }} 
+          onIndexChange={(newIdx) => {
+            setSelectedIndex(newIdx);
+            updateUrlForImage(newIdx, sortedImages);
+          }}
           whatsapp={whatsapp}
         />
       )}

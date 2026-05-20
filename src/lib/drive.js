@@ -306,35 +306,33 @@ export const getConfig = cache(async () => {
   try {
     const drive = google.drive({ version: 'v3', auth: getAuth() });
 
-    // Find config.json in the private root
+    // Locate the file named exactly "config.json" within GOOGLE_DRIVE_PRIVATE_ROOT_ID
     const searchRes = await drive.files.list({
-      q: `'${rootFolderId}' in parents and name = 'config.json' and mimeType = 'application/json' and trashed = false`,
+      q: `'${rootFolderId}' in parents and name = 'config.json' and trashed = false`,
       fields: 'files(id, name)',
       pageSize: 1,
     });
 
     const files = searchRes.data.files || [];
-
-    // Fallback: also accept plain-text JSON files named config.json
     if (files.length === 0) {
-      const fallbackSearch = await drive.files.list({
-        q: `'${rootFolderId}' in parents and name = 'config.json' and trashed = false`,
-        fields: 'files(id, name)',
-        pageSize: 1,
-      });
-      if ((fallbackSearch.data.files || []).length === 0) return getDefaultConfig();
-      files.push(...fallbackSearch.data.files);
+      console.warn('[getConfig] config.json not found in private root. Using default fallback.');
+      return getDefaultConfig();
     }
 
     const fileId = files[0].id;
 
-    // Download file content as text
+    // Fetch the file content stream
     const response = await drive.files.get(
       { fileId, alt: 'media' },
-      { responseType: 'arraybuffer' }
+      { responseType: 'stream' }
     );
 
-    const text = Buffer.from(response.data).toString('utf-8');
+    // Consume the stream
+    const chunks = [];
+    for await (const chunk of response.data) {
+      chunks.push(chunk);
+    }
+    const text = Buffer.concat(chunks).toString('utf-8');
     const raw = JSON.parse(text);
 
     return {

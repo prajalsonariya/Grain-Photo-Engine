@@ -45,7 +45,7 @@ function FolderRow({ folder, handleCopy, copiedId, basePath }) {
   );
 }
 
-export default function AdminClient({ publicFolders, privateFolders }) {
+export default function AdminClient({ publicFolders, privateFolders, isLimitReached }) {
   const [copiedId, setCopiedId] = useState(null);
 
   const handleCopy = async (folderId, basePath) => {
@@ -100,6 +100,14 @@ export default function AdminClient({ publicFolders, privateFolders }) {
                 basePath="/share"
               />
             ))}
+            
+            {isLimitReached && (
+              <div className="mt-4 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-sm text-center">
+                <p className="text-yellow-500/90 text-[10px] sm:text-xs uppercase tracking-[0.15em] font-medium">
+                  Gallery limit reached for Freelancer tier. Upgrade to Agency for unlimited active client galleries.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </section>

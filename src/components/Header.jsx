@@ -89,9 +89,17 @@ export default async function Header() {
           href="/"
           className="flex items-center justify-center group absolute left-1/2 -translate-x-1/2"
         >
-          <span className="text-sm tracking-[0.3em] font-light uppercase text-white hover:text-neutral-300 transition-colors whitespace-nowrap">
-            {displayName}
-          </span>
+          {isAgency && config.logoUrl ? (
+            <img 
+              src={config.logoUrl} 
+              alt={displayName} 
+              className="h-8 sm:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <span className="text-sm tracking-[0.3em] font-light uppercase text-white hover:text-neutral-300 transition-colors whitespace-nowrap">
+              {displayName}
+            </span>
+          )}
         </Link>
 
         {/* ── Right: social icons + WhatsApp action dock ── */}

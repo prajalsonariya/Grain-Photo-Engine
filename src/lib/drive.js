@@ -16,16 +16,24 @@ function cdnProxy(baseCdnUrl, size) {
   return `/api/thumbnail?url=${encodeURIComponent(cdnUrl)}`;
 }
 
-async function fetchFoldersWithThumbnails(drive, rootFolderId) {
-  const foldersRes = await drive.files.list({
+async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
+  const options = {
     q: `'${rootFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
     fields: 'files(id, name, createdTime)',
     orderBy: 'createdTime desc',
-  });
+  };
+  if (limit) {
+    options.pageSize = limit + 1;
+  }
+  const foldersRes = await drive.files.list(options);
+
+  const rawFiles = foldersRes.data.files || [];
+  const hasMore = limit ? rawFiles.length > limit : false;
+  const filesToProcess = limit ? rawFiles.slice(0, limit) : rawFiles;
 
   const folders = [];
 
-  for (const folder of (foldersRes.data.files || [])) {
+  for (const folder of filesToProcess) {
     let targetImage = null;
 
     // First, search specifically for a file named "cover"
@@ -102,7 +110,7 @@ async function fetchFoldersWithThumbnails(drive, rootFolderId) {
     });
   }
 
-  return folders;
+  return { folders, hasMore };
 }
 
 export const getFolders = cache(async () => {
@@ -133,23 +141,23 @@ export const getFolders = cache(async () => {
     });
   }
 
-  const subfolders = await fetchFoldersWithThumbnails(drive, rootFolderId);
+  const { folders: subfolders } = await fetchFoldersWithThumbnails(drive, rootFolderId);
   return [...folders, ...subfolders].sort((a, b) => a.name.localeCompare(b.name));
 });
 
-export const getPrivateFolders = cache(async () => {
+export const getPrivateFolders = cache(async (limit = null) => {
   const drive = google.drive({ version: 'v3', auth: getAuth() });
   const rootFolderId = process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID;
 
   if (!rootFolderId || rootFolderId === 'your_private_folder_id_here') {
-    return [];
+    return { folders: [], hasMore: false };
   }
 
   try {
-    return await fetchFoldersWithThumbnails(drive, rootFolderId);
+    return await fetchFoldersWithThumbnails(drive, rootFolderId, limit);
   } catch (err) {
     console.error('Error fetching private folders:', err);
-    return [];
+    return { folders: [], hasMore: false };
   }
 });
 

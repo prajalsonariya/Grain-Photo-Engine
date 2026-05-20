@@ -5,10 +5,16 @@ import Header from '@/components/Header';
 export const revalidate = 0; // Never cache the admin page completely to ensure fresh list
 
 export default async function AdminPage() {
-  const [publicFolders, privateFolders] = await Promise.all([
+  const plan = process.env.NEXT_PUBLIC_CLIENT_PLAN || 'freelancer';
+  const isAgency = plan === 'agency';
+
+  const [publicFolders, privateFoldersRes] = await Promise.all([
     getFolders(),
-    getPrivateFolders()
+    getPrivateFolders(isAgency ? null : 3)
   ]);
+
+  const privateFolders = privateFoldersRes.folders || [];
+  const isLimitReached = privateFoldersRes.hasMore || false;
 
   return (
     <main className="min-h-screen bg-[#1e1e1e] text-neutral-200 font-sans selection:bg-white/20 selection:text-white">
@@ -20,7 +26,11 @@ export default async function AdminPage() {
         <p className="text-neutral-400 mb-8 font-light tracking-wide text-sm">
           Generate secure shareable links for your clients. Manage both public and private collections.
         </p>
-        <AdminClient publicFolders={publicFolders} privateFolders={privateFolders} />
+        <AdminClient 
+          publicFolders={publicFolders} 
+          privateFolders={privateFolders} 
+          isLimitReached={isLimitReached}
+        />
       </div>
     </main>
   );

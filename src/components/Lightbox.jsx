@@ -143,7 +143,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
           >
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[60] bg-black/60 hover:bg-black/90 text-white p-2 sm:p-3 rounded-full backdrop-blur-md transition-all opacity-100 sm:opacity-0 group-hover:opacity-100 shadow-xl"
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[60] flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0 sm:p-3 glass-panel !rounded-full text-white transition-all opacity-100 sm:opacity-0 group-hover:opacity-100 shadow-xl"
             >
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
@@ -177,7 +177,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
             <a
               href={`${image.url}&download=true`}
               download={image.name}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-white/90 hover:bg-white text-black text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-colors rounded-sm sm:min-w-[180px]"
+              className="flex items-center justify-center gap-2 min-h-[48px] sm:min-h-[44px] w-full sm:w-auto px-6 bg-white/90 hover:bg-white text-black text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-colors rounded-[4px] sm:min-w-[180px]"
             >
               <Download className="w-4 h-4" />
               Download Image
@@ -187,10 +187,10 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
             <button
               onClick={handleShareToWhatsApp}
               title="Copy gallery link to share on WhatsApp"
-              className={`flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-all rounded-sm sm:min-w-[180px] ${
+              className={`flex items-center justify-center gap-2 min-h-[48px] sm:min-h-[44px] w-full sm:w-auto px-6 border text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-all rounded-[4px] sm:min-w-[180px] ${
                 copied
-                  ? 'border-green-500/60 bg-green-500/10 text-green-400'
-                  : 'border-green-500/30 text-green-400/80 hover:text-green-400 hover:bg-green-500/10 hover:border-green-500/50'
+                  ? 'border-blue-500/60 bg-blue-500/10 text-blue-400'
+                  : 'border-blue-500/30 text-blue-400/80 hover:text-blue-400 hover:bg-blue-500/10 hover:border-blue-500/50'
               }`}
             >
               <WhatsAppIcon className="w-4 h-4 flex-shrink-0" />
@@ -201,7 +201,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
             {!showOriginal && image.type !== 'video' && (
               <button
                 onClick={() => setShowOriginal(true)}
-                className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/20 text-white/90 hover:text-white hover:bg-white/10 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium transition-colors rounded-sm sm:min-w-[180px]"
+                className="flex items-center justify-center gap-2 min-h-[48px] sm:min-h-[44px] w-full sm:w-auto px-6 border border-white/20 text-white/90 hover:text-white hover:bg-white/10 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium transition-colors rounded-[4px] sm:min-w-[180px]"
               >
                 <Eye className="w-4 h-4" />
                 View Original
@@ -213,7 +213,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
               <a
                 href={`/api/image/${image.rawFileId}?download=true&filename=${encodeURIComponent(image.rawFileName || 'RAW_file')}`}
                 download={image.rawFileName || `RAW_${image.name}`}
-                className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/10 text-white/70 hover:text-white text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium hover:bg-white/5 transition-colors rounded-sm sm:min-w-[180px]"
+                className="flex items-center justify-center gap-2 min-h-[48px] sm:min-h-[44px] w-full sm:w-auto px-6 border border-white/10 text-white/70 hover:text-white text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium hover:bg-white/5 transition-colors rounded-[4px] sm:min-w-[180px]"
               >
                 <Download className="w-3 h-3" />
                 Download RAW

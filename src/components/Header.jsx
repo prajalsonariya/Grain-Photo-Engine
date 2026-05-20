@@ -79,7 +79,7 @@ export default async function Header() {
   const socials = isAgency ? (config.socials || {}) : {};
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/80 backdrop-blur-md border-b border-white/5 transition-all duration-300">
+    <header className="fixed top-0 left-0 right-0 z-50 glass-panel !rounded-none !border-x-0 !border-t-0 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between relative">
 
         {/* ── Left spacer ── */}
@@ -113,7 +113,7 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
             >
               <InstagramIcon className="w-[15px] h-[15px]" />
             </a>
@@ -125,7 +125,7 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Twitter / X"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
             >
               <TwitterXIcon className="w-[15px] h-[15px]" />
             </a>
@@ -137,7 +137,7 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
             >
               <FacebookIcon className="w-[15px] h-[15px]" />
             </a>
@@ -149,7 +149,7 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Snapchat"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
             >
               <SnapchatIcon className="w-[15px] h-[15px]" />
             </a>
@@ -161,7 +161,7 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Portfolio website"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
             >
               <PortfolioIcon className="w-[15px] h-[15px]" />
             </a>
@@ -174,14 +174,13 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               id="header-whatsapp-cta"
-              className="flex items-center gap-2 px-4 py-2 rounded-full
-                         bg-white/8 backdrop-blur-md border border-white/15
-                         text-white hover:bg-white/15 hover:border-white/30
-                         transition-all duration-200 shadow-lg
+              className="flex items-center justify-center gap-2 px-5 sm:px-4 min-h-[48px] sm:min-h-[36px] rounded-[4px]
+                         glass-panel hover:border-blue-500/50 hover:bg-blue-500/10
+                         text-white transition-all duration-200
                          text-[10px] uppercase tracking-[0.15em] font-medium
                          group"
             >
-              <WhatsAppIcon className="w-3.5 h-3.5 text-green-400 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
+              <WhatsAppIcon className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-blue-500 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
               <span className="hidden sm:inline">Get in Touch</span>
             </a>
           )}

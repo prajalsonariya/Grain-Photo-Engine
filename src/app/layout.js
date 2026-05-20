@@ -32,7 +32,7 @@ export default function RootLayout({ children }) {
       lang="en"
       className={`${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-primary-bg">
+      <body className="min-h-full flex flex-col font-sans bg-[#1e1e1e]">
         <div className="flex-1 flex flex-col">
           {children}
         </div>

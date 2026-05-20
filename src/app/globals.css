@@ -1,75 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-neutral-950: #1e1e1e;
-  --color-neutral-900: #1e1e1e;
-  --color-black: #1e1e1e;
-  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --color-neutral-950: #08080A;
+  --color-neutral-900: #08080A;
+  --color-black: #08080A;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
-  --background: #0F0F0F;
-  --foreground: rgba(240, 240, 235, 0.95);
-  --primary-bg: #0F0F0F; /* Deep, True Black */
-  --neutral-accent: #F0F0EB; /* Soft, Elegant Off-White */
-  --highlight-blue: #0c172d; /* Professional Deep Blue */
-  --secondary-accent: #426264; /* Muted Sophistication */
+  --background: #08080A;
+  --foreground: rgba(226, 232, 240, 0.9);
 }
-
-/* TYPOGRAPHY INFUSION */
-h1, h2, h3, .brand-logo { 
-  font-family: 'Roxborough CF', var(--font-inter), serif; 
-  font-weight: 500; 
-  letter-spacing: -0.015em; 
-} 
-
-p, .body-text, span, button { 
-  font-family: var(--font-inter), sans-serif; 
-  font-weight: 400; 
-  line-height: 1.6; 
-  color: rgba(240, 240, 235, 0.95); 
-} 
-
-p.bold-commercial { 
-  font-weight: 600; 
-  font-family: var(--font-inter), sans-serif; 
-} 
-
-/* GRID / GLASSMORPHISM */
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 2.5rem;
-}
-
-.gallery-card {
-  background: rgba(15, 15, 15, 0.4);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(240, 240, 235, 0.12);
-  border-radius: 6px;
-  transition: transform 0.2s cubic-bezier(0.2, 0.0, 0.0, 1.0);
-}
-
-.gallery-card:hover { 
-  transform: scale(1.025); 
-}
-
-/* CONTENT VISUALS & WORDING UPDATES */
-p.env-header { font-size: 1.4rem; color: #FFF; font-weight: 600; }
-p.env-steps { font-size: 1.1rem; color: rgba(240, 240, 235, 0.9); }
-
-h2.collections-title, h1.collections-title { font-size: 3.5rem; text-align: left; }
-p.collection-metadata { font-size: 0.85rem; color: var(--highlight-blue); opacity: 0.9; margin-top: 0.5rem; font-family: var(--font-inter); }
-
-h2.album-details-title, h1.album-details-title { font-size: 3rem; text-align: left; }
-button.select-action { background-color: var(--secondary-accent); color: #FFF; font-weight: 500; font-size: 1rem; }
-
-h1.admin-title { font-size: 3.5rem; }
-p.admin-subtitle { font-size: 1.15rem; color: var(--neutral-accent); font-weight: 300; line-height: 1.8; margin-top: 1rem; }
-h2.section-header { color: #FFF; border-bottom: 1px solid rgba(240, 240, 235, 0.2); padding-bottom: 0.75rem; margin-top: 3.5rem; }
-button.copy-link { background-color: var(--highlight-blue); color: #FFF; padding: 12px 24px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; border-radius: 4px; }
-
-p.upsell-alert { background-color: rgba(66, 98, 100, 0.35); border: 1px solid var(--secondary-accent); color: #FFF; padding: 1.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; border-radius: 4px; }
 
 body {
   background-color: var(--background);
@@ -77,6 +18,12 @@ body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@layer components {
+  .glass-panel {
+    @apply border border-[#1A1A1D] bg-[rgba(26,26,29,0.15)] backdrop-blur-[10px] rounded-[4px];
+  }
 }
 
 /* Custom Scrollbar for Lightbox Info Panel */

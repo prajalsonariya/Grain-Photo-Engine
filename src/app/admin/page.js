@@ -23,11 +23,11 @@ export default async function AdminPage() {
     <main className="min-h-screen bg-[#1e1e1e] text-neutral-200 font-sans selection:bg-white/20 selection:text-white">
       <Header />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-32 pb-24">
-        <h1 className="admin-title text-white mb-2 tracking-tight uppercase">
-          Solnyter Media | Command Center
+        <h1 className="text-3xl font-black text-white mb-8 tracking-tight uppercase">
+          Private Admin Dashboard
         </h1>
-        <p className="admin-subtitle mb-8">
-          Admin Panel | Centralize client delivery pipelines. Configure dynamic public collections and secure, high-speed private media assets.
+        <p className="text-neutral-400 mb-8 font-light tracking-wide text-sm">
+          Generate secure shareable links for your clients. Manage both public and private collections.
         </p>
         <AdminClient 
           publicFolders={publicFolders} 

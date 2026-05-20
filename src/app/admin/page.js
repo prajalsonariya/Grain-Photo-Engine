@@ -24,10 +24,10 @@ export default async function AdminPage() {
       <Header />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-32 pb-24">
         <h1 className="text-3xl font-black text-white mb-8 tracking-tight uppercase">
-          Private Admin Dashboard
+          Gallery Engine
         </h1>
         <p className="text-neutral-400 mb-8 font-light tracking-wide text-sm">
-          Generate secure shareable links for your clients. Manage both public and private collections.
+          Securely deliver cinematic asset streams.
         </p>
         <AdminClient 
           publicFolders={publicFolders} 

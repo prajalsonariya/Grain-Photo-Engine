@@ -5,7 +5,7 @@ import { Copy, Check, Folder } from 'lucide-react';
 
 function FolderRow({ folder, handleCopy, copiedId, basePath }) {
   return (
-    <div className="flex items-center justify-between p-4 glass-panel hover:bg-[rgba(26,26,29,0.3)] transition-colors">
+    <div className="flex items-center justify-between p-4 border border-white/10 bg-black/20 rounded-sm hover:bg-black/40 transition-colors">
       <div className="flex items-center gap-4">
         {folder.thumbnailUrl ? (
           <img 
@@ -27,7 +27,7 @@ function FolderRow({ folder, handleCopy, copiedId, basePath }) {
       </div>
       <button 
         onClick={() => handleCopy(folder.id, basePath)}
-        className="flex items-center justify-center gap-2 min-h-[48px] sm:min-h-[36px] px-4 bg-white text-black hover:bg-neutral-200 transition-colors rounded-[4px] text-xs uppercase tracking-wider font-semibold"
+        className="flex items-center gap-2 px-4 py-2 bg-white text-black hover:bg-neutral-200 transition-colors rounded-sm text-xs uppercase tracking-wider font-semibold"
       >
         {copiedId === folder.id ? (
           <>
@@ -37,7 +37,7 @@ function FolderRow({ folder, handleCopy, copiedId, basePath }) {
         ) : (
           <>
             <Copy className="w-4 h-4" />
-            Copy Link
+            Share Link
           </>
         )}
       </button>
@@ -65,7 +65,7 @@ export default function AdminClient({ publicFolders, privateFolders, isLimitReac
       <section>
         <h2 className="text-xl font-bold text-white mb-4 tracking-wider uppercase border-b border-white/10 pb-2">Public Folders</h2>
         {publicFolders.length === 0 ? (
-          <div className="p-8 glass-panel text-center text-neutral-500">
+          <div className="p-8 border border-white/10 rounded-sm bg-neutral-900/30 text-center text-neutral-500">
             No public folders found.
           </div>
         ) : (
@@ -93,7 +93,7 @@ export default function AdminClient({ publicFolders, privateFolders, isLimitReac
           )}
         </h2>
         {privateFolders.length === 0 ? (
-          <div className="p-8 glass-panel text-center text-neutral-500">
+          <div className="p-8 border border-white/10 rounded-sm bg-neutral-900/30 text-center text-neutral-500">
             No private folders found. Ensure your private root ID is correct.
           </div>
         ) : (
@@ -109,9 +109,13 @@ export default function AdminClient({ publicFolders, privateFolders, isLimitReac
             ))}
             
             {isLimitReached && (
-              <div className="mt-4 p-4 glass-panel !border-yellow-500/30 text-center">
-                <p className="text-yellow-500/90 text-[10px] sm:text-xs uppercase tracking-[0.15em] font-medium">
-                  Gallery limit reached for Freelancer tier. Upgrade to Agency for unlimited active client galleries.
+              <div className="mt-4 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-sm text-center">
+                <h3 className="text-yellow-500/90 text-sm font-bold uppercase tracking-wider mb-2">
+                  Studio Volume Limit Reached.
+                </h3>
+                <p className="text-yellow-500/80 text-[10px] sm:text-xs uppercase tracking-[0.15em] font-medium">
+                  Freelancer tier is active ({privateFolders.length}/{limit} private folders).<br/>
+                  Uncap volume with the upgraded Studio Plan.
                 </p>
               </div>
             )}

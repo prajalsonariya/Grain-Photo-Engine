@@ -181,7 +181,7 @@ export default async function Header() {
                          group"
             >
               <WhatsAppIcon className="w-3.5 h-3.5 text-green-400 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
-              <span className="hidden sm:inline">Book a Session</span>
+              <span className="hidden sm:inline">Get in Touch</span>
             </a>
           )}
         </div>

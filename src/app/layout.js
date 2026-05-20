@@ -1,8 +1,8 @@
-import { Montserrat } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -30,9 +30,9 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${montserrat.variable} h-full antialiased`}
+      className={`${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-[#1e1e1e]">
+      <body className="min-h-full flex flex-col font-sans bg-primary-bg">
         <div className="flex-1 flex flex-col">
           {children}
         </div>

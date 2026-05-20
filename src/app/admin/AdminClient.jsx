@@ -27,7 +27,7 @@ function FolderRow({ folder, handleCopy, copiedId, basePath }) {
       </div>
       <button 
         onClick={() => handleCopy(folder.id, basePath)}
-        className="flex items-center gap-2 px-4 py-2 bg-white text-black hover:bg-neutral-200 transition-colors rounded-sm text-xs uppercase tracking-wider font-semibold"
+        className="copy-link flex items-center gap-2 transition-colors rounded-sm"
       >
         {copiedId === folder.id ? (
           <>
@@ -37,7 +37,7 @@ function FolderRow({ folder, handleCopy, copiedId, basePath }) {
         ) : (
           <>
             <Copy className="w-4 h-4" />
-            Copy Link
+            Copy Client Key
           </>
         )}
       </button>
@@ -63,7 +63,7 @@ export default function AdminClient({ publicFolders, privateFolders, isLimitReac
   return (
     <div className="flex flex-col gap-12">
       <section>
-        <h2 className="text-xl font-bold text-white mb-4 tracking-wider uppercase border-b border-white/10 pb-2">Public Folders</h2>
+        <h2 className="section-header text-xl font-bold uppercase">Active Media | Public Collections</h2>
         {publicFolders.length === 0 ? (
           <div className="p-8 border border-white/10 rounded-sm bg-neutral-900/30 text-center text-neutral-500">
             No public folders found.
@@ -84,8 +84,8 @@ export default function AdminClient({ publicFolders, privateFolders, isLimitReac
       </section>
 
       <section>
-        <h2 className="text-xl font-bold text-white mb-4 tracking-wider uppercase border-b border-white/10 pb-2 flex items-center">
-          Private Folders
+        <h2 className="section-header text-xl font-bold uppercase flex items-center">
+          Active Media | Client Access
           {limit && (
             <span className="ml-3 text-sm font-medium text-neutral-500 normal-case tracking-normal">
               ({privateFolders.length}/{limit})
@@ -109,9 +109,9 @@ export default function AdminClient({ publicFolders, privateFolders, isLimitReac
             ))}
             
             {isLimitReached && (
-              <div className="mt-4 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-sm text-center">
-                <p className="text-yellow-500/90 text-[10px] sm:text-xs uppercase tracking-[0.15em] font-medium">
-                  Gallery limit reached for Freelancer tier. Upgrade to Agency for unlimited active client galleries.
+              <div className="mt-4">
+                <p className="upsell-alert">
+                  OPERATIONAL CAPACITY EXCEEDED (FREELANCER TIER). UPGRADE TO AGENCY PLAN FOR UNLIMITED CLIENT MEDIA DELIVERY PIPELINES.
                 </p>
               </div>
             )}

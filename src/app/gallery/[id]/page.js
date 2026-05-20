@@ -16,6 +16,9 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function GalleryPage({ params }) {
+  const plan = process.env.NEXT_PUBLIC_CLIENT_PLAN || 'freelancer';
+  if (plan === 'portfolio') notFound();
+
   const { id } = await params;
 
   const [{ images, subfolders }, folder, config] = await Promise.all([

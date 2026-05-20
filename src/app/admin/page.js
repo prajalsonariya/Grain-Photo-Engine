@@ -1,11 +1,14 @@
 import { getPrivateFolders, getFolders } from '@/lib/drive';
 import AdminClient from './AdminClient';
 import Header from '@/components/Header';
+import { notFound } from 'next/navigation';
 
 export const revalidate = 0; // Never cache the admin page completely to ensure fresh list
 
 export default async function AdminPage() {
   const plan = process.env.NEXT_PUBLIC_CLIENT_PLAN || 'freelancer';
+  if (plan === 'portfolio') notFound();
+  
   const isAgency = plan === 'agency';
 
   const [publicFolders, privateFoldersRes] = await Promise.all([

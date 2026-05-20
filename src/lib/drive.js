@@ -24,6 +24,8 @@ async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
   };
   if (limit) {
     options.pageSize = limit + 1;
+  } else {
+    options.pageSize = 1000;
   }
   const foldersRes = await drive.files.list(options);
 

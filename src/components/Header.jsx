@@ -65,7 +65,8 @@ export default async function Header() {
   } else if (isAgency) {
     displayName = config.photographers.join(' x ');
   } else {
-    // freelancer: strictly first element only
+    // freelancer & portfolio tiers: strictly first element only,
+    // explicitly blocking custom logos and extra socials.
     displayName = config.photographers[0] || 'Studio';
   }
 

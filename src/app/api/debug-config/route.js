@@ -65,7 +65,7 @@ export async function GET() {
     return new Response(JSON.stringify({
       mimeType: file.mimeType,
       rawText: text,
-      sanitizedText: text.replace(/[\u201C\u201D]/g, '"').replace(/^\s*\/\/.*$/gm, '')
+      sanitizedText: text.replace(/[\u201C\u201D]/g, '"').replace(/^\s*\/\/.*$/gm, '').replace(/,\s*([\]}])/g, '$1')
     }, null, 2), {
       headers: { 'Content-Type': 'application/json' }
     });

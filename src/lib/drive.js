@@ -372,7 +372,11 @@ export const getConfig = cache(async () => {
     text = text.replace(/[\u201C\u201D]/g, '"'); // replace smart quotes
     
     // Strip '//' comments to support user notes in the Drive config
-    const sanitizedText = text.replace(/^\s*\/\/.*$/gm, '');
+    let sanitizedText = text.replace(/^\s*\/\/.*$/gm, '');
+    
+    // Strip trailing commas that might occur if the last item is commented out
+    sanitizedText = sanitizedText.replace(/,\s*([\]}])/g, '$1');
+
     const raw = JSON.parse(sanitizedText);
 
     return {

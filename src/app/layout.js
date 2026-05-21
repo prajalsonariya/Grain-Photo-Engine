@@ -18,7 +18,7 @@ function Footer() {
         href="https://www.instagram.com/prajal_sonariya/"
         target="_blank"
         rel="noopener noreferrer"
-        className="text-neutral-600 hover:text-neutral-400 transition-colors text-[9px] uppercase tracking-[0.25em] font-light"
+        className="text-neutral-400 hover:text-neutral-300 transition-colors text-[9px] uppercase tracking-[0.25em] font-light"
       >
         Powered by Grain Photo Engine
       </a>

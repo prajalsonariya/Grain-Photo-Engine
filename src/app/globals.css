@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-neutral-950: #08080A;
-  --color-neutral-900: #08080A;
-  --color-black: #08080A;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --color-neutral-950: #1e1e1e;
+  --color-neutral-900: #1e1e1e;
+  --color-black: #1e1e1e;
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
-  --background: #08080A;
-  --foreground: rgba(226, 232, 240, 0.9);
+  --background: #1e1e1e;
+  --foreground: #ededed;
 }
 
 body {
@@ -18,12 +18,6 @@ body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-@layer components {
-  .glass-panel {
-    @apply border border-[#1A1A1D] bg-[rgba(26,26,29,0.15)] backdrop-blur-[10px] rounded-[4px];
-  }
 }
 
 /* Custom Scrollbar for Lightbox Info Panel */

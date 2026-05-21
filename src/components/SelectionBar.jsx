@@ -24,7 +24,7 @@ export default function SelectionBar({ selectedCount, onDownload, onClear, onSel
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3 sm:py-4 glass-panel shadow-2xl shadow-black/50"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3 sm:py-4 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl shadow-black/50"
         >
           <span className="text-white text-xs sm:text-sm font-medium tracking-wide whitespace-nowrap">
             <span className="text-white font-semibold">{selectedCount}</span>
@@ -35,7 +35,7 @@ export default function SelectionBar({ selectedCount, onDownload, onClear, onSel
 
           <button
             onClick={onSelectAll}
-            className="flex items-center justify-center min-h-[48px] sm:min-h-0 gap-1.5 px-2 text-neutral-400 hover:text-white text-[10px] sm:text-xs uppercase tracking-[0.15em] transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 text-neutral-400 hover:text-white text-[10px] sm:text-xs uppercase tracking-[0.15em] transition-colors whitespace-nowrap"
           >
             <CheckSquare className="w-3.5 h-3.5" />
             {selectedCount === totalCount ? 'Deselect All' : 'Select All'}
@@ -46,7 +46,7 @@ export default function SelectionBar({ selectedCount, onDownload, onClear, onSel
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className="flex items-center justify-center gap-2 min-h-[48px] sm:min-h-0 px-4 sm:px-5 py-2 bg-white hover:bg-neutral-200 disabled:bg-neutral-600 text-black disabled:text-neutral-400 text-[10px] sm:text-xs uppercase tracking-[0.15em] font-medium rounded-[4px] transition-colors whitespace-nowrap"
+            className="flex items-center gap-2 px-4 sm:px-5 py-2 bg-white hover:bg-neutral-200 disabled:bg-neutral-600 text-black disabled:text-neutral-400 text-[10px] sm:text-xs uppercase tracking-[0.15em] font-medium rounded-full transition-colors whitespace-nowrap"
           >
             {isDownloading ? (
               <>
@@ -66,7 +66,7 @@ export default function SelectionBar({ selectedCount, onDownload, onClear, onSel
 
           <button
             onClick={onClear}
-            className="flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0 text-neutral-500 hover:text-white transition-colors p-1"
+            className="text-neutral-500 hover:text-white transition-colors p-1"
             title="Clear selection"
           >
             <X className="w-4 h-4" />

@@ -40,7 +40,7 @@ export default async function GalleryPage({ params }) {
             <ArrowLeft className="w-4 h-4" />
             Back to Collections
           </Link>
-          <h1 className="album-details-title text-white tracking-[0.2em] uppercase">
+          <h1 className="text-2xl sm:text-3xl font-light text-white tracking-[0.2em] uppercase">
             {folder?.name || 'Gallery'}
           </h1>
         </div>

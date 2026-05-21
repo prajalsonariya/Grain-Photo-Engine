@@ -116,35 +116,47 @@ async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
 }
 
 export const getFolders = cache(async () => {
-  const drive = google.drive({ version: 'v3', auth: getAuth() });
   const rootFolderId = process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID;
 
-  // Check if root folder has direct images
-  const rootImagesRes = await drive.files.list({
-    q: `'${rootFolderId}' in parents and mimeType contains 'image/' and trashed = false`,
-    fields: 'files(id, name, thumbnailLink)',
-    orderBy: 'createdTime desc',
-    pageSize: 20, // get a few to check for 'cover'
-  });
-
-  const folders = [];
-
-  if (rootImagesRes.data.files && rootImagesRes.data.files.length > 0) {
-    const coverImage = rootImagesRes.data.files.find(f => f.name.toLowerCase().includes('cover')) || rootImagesRes.data.files[0];
-    let fallbackUrl = `/api/image/${coverImage.id}`;
-    let baseCdnUrl = coverImage.thumbnailLink ? coverImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
-    
-    folders.push({
-      id: rootFolderId,
-      name: 'Main Collection',
-      thumbnailUrl: baseCdnUrl ? cdnProxy(baseCdnUrl, 's200-rw') : fallbackUrl,
-      baseCdnUrl,
-      fallbackUrl
-    });
+  // Guard: if no valid root ID, return empty (build will succeed, runtime will populate)
+  if (!rootFolderId || rootFolderId.includes('.') || rootFolderId.length < 10) {
+    console.warn('[getFolders] GOOGLE_DRIVE_PUBLIC_ROOT_ID is missing or invalid.');
+    return [];
   }
 
-  const { folders: subfolders } = await fetchFoldersWithThumbnails(drive, rootFolderId);
-  return [...folders, ...subfolders].sort((a, b) => a.name.localeCompare(b.name));
+  try {
+    const drive = google.drive({ version: 'v3', auth: getAuth() });
+
+    // Check if root folder has direct images
+    const rootImagesRes = await drive.files.list({
+      q: `'${rootFolderId}' in parents and mimeType contains 'image/' and trashed = false`,
+      fields: 'files(id, name, thumbnailLink)',
+      orderBy: 'createdTime desc',
+      pageSize: 20,
+    });
+
+    const folders = [];
+
+    if (rootImagesRes.data.files && rootImagesRes.data.files.length > 0) {
+      const coverImage = rootImagesRes.data.files.find(f => f.name.toLowerCase().includes('cover')) || rootImagesRes.data.files[0];
+      let fallbackUrl = `/api/image/${coverImage.id}`;
+      let baseCdnUrl = coverImage.thumbnailLink ? coverImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
+      
+      folders.push({
+        id: rootFolderId,
+        name: 'Main Collection',
+        thumbnailUrl: baseCdnUrl ? cdnProxy(baseCdnUrl, 's200-rw') : fallbackUrl,
+        baseCdnUrl,
+        fallbackUrl
+      });
+    }
+
+    const { folders: subfolders } = await fetchFoldersWithThumbnails(drive, rootFolderId);
+    return [...folders, ...subfolders].sort((a, b) => a.name.localeCompare(b.name));
+  } catch (err) {
+    console.error('[getFolders] Failed to fetch folders from Drive:', err.message);
+    return [];
+  }
 });
 
 export const getPrivateFolders = cache(async (limit = null) => {

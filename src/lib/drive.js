@@ -116,47 +116,35 @@ async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
 }
 
 export const getFolders = cache(async () => {
+  const drive = google.drive({ version: 'v3', auth: getAuth() });
   const rootFolderId = process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID;
 
-  // Guard: if no valid root ID, return empty (build will succeed, runtime will populate)
-  if (!rootFolderId || rootFolderId.includes('.') || rootFolderId.length < 10) {
-    console.warn('[getFolders] GOOGLE_DRIVE_PUBLIC_ROOT_ID is missing or invalid.');
-    return [];
-  }
+  // Check if root folder has direct images
+  const rootImagesRes = await drive.files.list({
+    q: `'${rootFolderId}' in parents and mimeType contains 'image/' and trashed = false`,
+    fields: 'files(id, name, thumbnailLink)',
+    orderBy: 'createdTime desc',
+    pageSize: 20, // get a few to check for 'cover'
+  });
 
-  try {
-    const drive = google.drive({ version: 'v3', auth: getAuth() });
+  const folders = [];
 
-    // Check if root folder has direct images
-    const rootImagesRes = await drive.files.list({
-      q: `'${rootFolderId}' in parents and mimeType contains 'image/' and trashed = false`,
-      fields: 'files(id, name, thumbnailLink)',
-      orderBy: 'createdTime desc',
-      pageSize: 20,
+  if (rootImagesRes.data.files && rootImagesRes.data.files.length > 0) {
+    const coverImage = rootImagesRes.data.files.find(f => f.name.toLowerCase().includes('cover')) || rootImagesRes.data.files[0];
+    let fallbackUrl = `/api/image/${coverImage.id}`;
+    let baseCdnUrl = coverImage.thumbnailLink ? coverImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
+    
+    folders.push({
+      id: rootFolderId,
+      name: 'Main Collection',
+      thumbnailUrl: baseCdnUrl ? cdnProxy(baseCdnUrl, 's200-rw') : fallbackUrl,
+      baseCdnUrl,
+      fallbackUrl
     });
-
-    const folders = [];
-
-    if (rootImagesRes.data.files && rootImagesRes.data.files.length > 0) {
-      const coverImage = rootImagesRes.data.files.find(f => f.name.toLowerCase().includes('cover')) || rootImagesRes.data.files[0];
-      let fallbackUrl = `/api/image/${coverImage.id}`;
-      let baseCdnUrl = coverImage.thumbnailLink ? coverImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
-      
-      folders.push({
-        id: rootFolderId,
-        name: 'Main Collection',
-        thumbnailUrl: baseCdnUrl ? cdnProxy(baseCdnUrl, 's200-rw') : fallbackUrl,
-        baseCdnUrl,
-        fallbackUrl
-      });
-    }
-
-    const { folders: subfolders } = await fetchFoldersWithThumbnails(drive, rootFolderId);
-    return [...folders, ...subfolders].sort((a, b) => a.name.localeCompare(b.name));
-  } catch (err) {
-    console.error('[getFolders] Failed to fetch folders from Drive:', err.message);
-    return [];
   }
+
+  const { folders: subfolders } = await fetchFoldersWithThumbnails(drive, rootFolderId);
+  return [...folders, ...subfolders].sort((a, b) => a.name.localeCompare(b.name));
 });
 
 export const getPrivateFolders = cache(async (limit = null) => {
@@ -321,23 +309,36 @@ function getDefaultConfig() {
 export const getConfig = cache(async () => {
   const rootFolderId = process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID;
 
-  if (!rootFolderId || rootFolderId === 'your_private_folder_id_here') {
-    return getDefaultConfig();
-  }
+  // Proceed even if private root is missing, because we can check the public root now
 
   try {
     const drive = google.drive({ version: 'v3', auth: getAuth() });
 
-    // Locate the file named exactly "config.json" within GOOGLE_DRIVE_PRIVATE_ROOT_ID
-    const searchRes = await drive.files.list({
-      q: `'${rootFolderId}' in parents and name = 'config.json' and trashed = false`,
-      fields: 'files(id, name)',
-      pageSize: 1,
-    });
+    let files = [];
+    let searchRes;
 
-    const files = searchRes.data.files || [];
+    // 1. Try private root if configured
+    if (rootFolderId && rootFolderId !== 'your_private_folder_id_here') {
+      searchRes = await drive.files.list({
+        q: `'${rootFolderId}' in parents and name = 'config.json' and trashed = false`,
+        fields: 'files(id, name)',
+        pageSize: 1,
+      });
+      files = searchRes.data.files || [];
+    }
+
+    // Fallback: If not in private root, try public root
+    if (files.length === 0 && process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID) {
+      searchRes = await drive.files.list({
+        q: `'${process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID}' in parents and name = 'config.json' and trashed = false`,
+        fields: 'files(id, name)',
+        pageSize: 1,
+      });
+      files = searchRes.data.files || [];
+    }
+
     if (files.length === 0) {
-      console.warn('[getConfig] config.json not found in private root. Using default fallback.');
+      console.warn('[getConfig] config.json not found in private or public root. Using default fallback.');
       return getDefaultConfig();
     }
 

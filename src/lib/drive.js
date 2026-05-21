@@ -321,7 +321,7 @@ export const getConfig = cache(async () => {
     if (rootFolderId && rootFolderId !== 'your_private_folder_id_here') {
       searchRes = await drive.files.list({
         q: `'${rootFolderId}' in parents and name = 'config.json' and trashed = false`,
-        fields: 'files(id, name)',
+        fields: 'files(id, name, mimeType)',
         pageSize: 1,
       });
       files = searchRes.data.files || [];
@@ -331,7 +331,7 @@ export const getConfig = cache(async () => {
     if (files.length === 0 && process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID) {
       searchRes = await drive.files.list({
         q: `'${process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID}' in parents and name = 'config.json' and trashed = false`,
-        fields: 'files(id, name)',
+        fields: 'files(id, name, mimeType)',
         pageSize: 1,
       });
       files = searchRes.data.files || [];
@@ -342,20 +342,33 @@ export const getConfig = cache(async () => {
       return getDefaultConfig();
     }
 
-    const fileId = files[0].id;
+    const file = files[0];
+    const fileId = file.id;
+    let response;
 
-    // Fetch the file content stream
-    const response = await drive.files.get(
-      { fileId, alt: 'media' },
-      { responseType: 'stream' }
-    );
+    if (file.mimeType === 'application/vnd.google-apps.document') {
+      // It's a Google Doc, so we must export it as plain text
+      response = await drive.files.export(
+        { fileId, mimeType: 'text/plain' },
+        { responseType: 'stream' }
+      );
+    } else {
+      // It's a regular file
+      response = await drive.files.get(
+        { fileId, alt: 'media' },
+        { responseType: 'stream' }
+      );
+    }
 
     // Consume the stream
     const chunks = [];
     for await (const chunk of response.data) {
       chunks.push(chunk);
     }
-    const text = Buffer.concat(chunks).toString('utf-8');
+    let text = Buffer.concat(chunks).toString('utf-8');
+
+    // If it was a Google doc, it sometimes includes BOM or weird quotes
+    text = text.replace(/[\u201C\u201D]/g, '"'); // replace smart quotes
     
     // Strip '//' comments to support user notes in the Drive config
     const sanitizedText = text.replace(/^\s*\/\/.*$/gm, '');

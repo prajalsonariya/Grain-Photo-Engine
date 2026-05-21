@@ -10,6 +10,14 @@ function WhatsAppIcon({ className }) {
   );
 }
 
+function PhoneIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+    </svg>
+  );
+}
+
 function InstagramIcon({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -70,16 +78,23 @@ export default async function Header() {
     displayName = config.photographers[0] || 'Studio';
   }
 
-  // ── WhatsApp CTA URL ──────────────────────────────────────────────────────
-  const waUrl = config.whatsapp
-    ? `https://wa.me/${config.whatsapp}?text=Hi!%20I%20saw%20your%20work%20on%20your%20gallery%20hub%20and%20wanted%20to%20inquire%20about%20booking%20a%20session.`
-    : null;
+  // ── Contact CTA URL ──────────────────────────────────────────────────────
+  let contactUrl = null;
+  let contactType = null;
+  
+  if (config.whatsapp) {
+    contactUrl = `https://wa.me/${config.whatsapp}?text=Hi!%20I%20saw%20your%20work%20on%20your%20gallery%20hub%20and%20wanted%20to%20inquire%20about%20booking%20a%20session.`;
+    contactType = 'whatsapp';
+  } else if (config.phone) {
+    contactUrl = `tel:${config.phone}`;
+    contactType = 'phone';
+  }
 
   // ── Socials (agency-only) ─────────────────────────────────────────────────
   const socials = isAgency ? (config.socials || {}) : {};
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass-panel !rounded-none !border-x-0 !border-t-0 transition-all duration-300">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/80 backdrop-blur-md border-b border-white/5 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between relative">
 
         {/* ── Left spacer ── */}
@@ -113,7 +128,7 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
             >
               <InstagramIcon className="w-[15px] h-[15px]" />
             </a>
@@ -125,7 +140,7 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Twitter / X"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
             >
               <TwitterXIcon className="w-[15px] h-[15px]" />
             </a>
@@ -137,7 +152,7 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
             >
               <FacebookIcon className="w-[15px] h-[15px]" />
             </a>
@@ -149,7 +164,7 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Snapchat"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
             >
               <SnapchatIcon className="w-[15px] h-[15px]" />
             </a>
@@ -161,27 +176,32 @@ export default async function Header() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Portfolio website"
-              className="text-neutral-500 hover:text-white transition-colors duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] sm:min-w-0 sm:min-h-0"
+              className="text-neutral-500 hover:text-white transition-colors duration-200 hidden sm:flex"
             >
               <PortfolioIcon className="w-[15px] h-[15px]" />
             </a>
           )}
 
-          {/* WhatsApp glassmorphic action dock */}
-          {waUrl && (
+          {/* Contact glassmorphic action dock */}
+          {contactUrl && (
             <a
-              href={waUrl}
+              href={contactUrl}
               target="_blank"
               rel="noopener noreferrer"
-              id="header-whatsapp-cta"
-              className="flex items-center justify-center gap-2 px-5 sm:px-4 min-h-[48px] sm:min-h-[36px] rounded-[4px]
-                         glass-panel hover:border-blue-500/50 hover:bg-blue-500/10
-                         text-white transition-all duration-200
+              id="header-contact-cta"
+              className="flex items-center gap-2 px-4 py-2 rounded-full
+                         bg-white/8 backdrop-blur-md border border-white/15
+                         text-white hover:bg-white/15 hover:border-white/30
+                         transition-all duration-200 shadow-lg
                          text-[10px] uppercase tracking-[0.15em] font-medium
                          group"
             >
-              <WhatsAppIcon className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-blue-500 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
-              <span className="hidden sm:inline">Get in Touch</span>
+              {contactType === 'whatsapp' ? (
+                <WhatsAppIcon className="w-3.5 h-3.5 text-green-400 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
+              ) : (
+                <PhoneIcon className="w-3.5 h-3.5 text-neutral-300 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />
+              )}
+              <span className="hidden sm:inline">Let's connect</span>
             </a>
           )}
         </div>

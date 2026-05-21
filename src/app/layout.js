@@ -1,8 +1,8 @@
-import { Inter } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
   subsets: ["latin"],
 });
 
@@ -20,7 +20,7 @@ function Footer() {
         rel="noopener noreferrer"
         className="text-neutral-600 hover:text-neutral-400 transition-colors text-[9px] uppercase tracking-[0.25em] font-light"
       >
-        Powered by Prajal Sonariya
+        Powered by Grain Photo Engine
       </a>
     </footer>
   );
@@ -30,7 +30,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} h-full antialiased`}
+      className={`${montserrat.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans bg-[#1e1e1e]">
         <div className="flex-1 flex flex-col">

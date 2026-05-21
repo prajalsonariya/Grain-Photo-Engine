@@ -119,7 +119,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.15, ease: "easeOut" }}
-        className="fixed inset-0 z-[100] bg-neutral-950/95 backdrop-blur-xl flex flex-col overflow-hidden"
+        className="fixed inset-0 pt-20 z-[40] bg-neutral-950/95 backdrop-blur-xl flex flex-col overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}

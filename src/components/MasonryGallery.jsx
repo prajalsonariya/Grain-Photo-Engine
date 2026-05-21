@@ -33,7 +33,7 @@ export default function MasonryGallery({ images, onImageClick, selectionMode, se
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className={`cursor-pointer group relative bg-neutral-900 overflow-hidden flex-grow-0 sm:flex-grow-[var(--ar)] w-[calc(20%-6.4px)] sm:w-[var(--w)] aspect-square sm:aspect-auto h-auto sm:h-[130px] md:h-[180px] ${
+              className={`cursor-pointer group relative bg-neutral-900 overflow-hidden flex-grow-0 sm:flex-grow-[var(--ar)] w-[calc(100%/3-5.33px)] sm:w-[var(--w)] aspect-square sm:aspect-auto h-auto sm:h-[130px] md:h-[180px] ${
                 isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-neutral-950' : ''
               }`}
               style={{ '--ar': aspectRatio, '--w': `${aspectRatio * 150}px`, maxWidth: '100%' }}

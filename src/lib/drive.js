@@ -368,6 +368,7 @@ export const getConfig = cache(async () => {
     let text = Buffer.concat(chunks).toString('utf-8');
 
     // If it was a Google doc, it sometimes includes BOM or weird quotes
+    text = text.replace(/^\uFEFF/, ''); // Strip BOM
     text = text.replace(/[\u201C\u201D]/g, '"'); // replace smart quotes
     
     // Strip '//' comments to support user notes in the Drive config

@@ -343,7 +343,10 @@ export const getConfig = cache(async () => {
       chunks.push(chunk);
     }
     const text = Buffer.concat(chunks).toString('utf-8');
-    const raw = JSON.parse(text);
+    
+    // Strip '//' comments to support user notes in the Drive config
+    const sanitizedText = text.replace(/^\s*\/\/.*$/gm, '');
+    const raw = JSON.parse(sanitizedText);
 
     return {
       photographers: Array.isArray(raw.photographers) && raw.photographers.length > 0
@@ -357,6 +360,9 @@ export const getConfig = cache(async () => {
         : 'Albums',
       whatsapp: typeof raw.whatsapp === 'string' && raw.whatsapp.trim()
         ? raw.whatsapp.trim()
+        : null,
+      phone: typeof raw.phone === 'string' && raw.phone.trim()
+        ? raw.phone.trim()
         : null,
       socials: raw.socials && typeof raw.socials === 'object' ? raw.socials : {},
     };

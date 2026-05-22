@@ -1,3 +1,4 @@
+import { Readable } from 'stream';
 import { getImageStream } from '@/lib/drive';
 
 export async function GET(request, { params }) {
@@ -27,7 +28,10 @@ export async function GET(request, { params }) {
       headers.set('Content-Disposition', `inline; filename="${filename}"`);
     }
 
-    return new Response(stream, { status, headers });
+    // Convert the Node.js stream into a Web ReadableStream for Next.js
+    const webStream = stream instanceof ReadableStream ? stream : Readable.toWeb(stream);
+
+    return new Response(webStream, { status, headers });
   } catch (error) {
     console.error('Error proxying image:', error);
     return new Response('Image not found or error fetching', { status: 404 });

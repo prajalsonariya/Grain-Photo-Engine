@@ -187,7 +187,8 @@ export const getFolderImages = cache(async (folderId) => {
     const baseName = parts.length > 1 ? parts.slice(0, -1).join('.') : file.name;
     const ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
     
-    const isVideo = file.mimeType && file.mimeType.startsWith('video/');
+    const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v'];
+    const isVideo = (file.mimeType && file.mimeType.startsWith('video/')) || videoExtensions.includes(ext);
     
     // Group videos separately from images so they don't overwrite each other if they share a name
     const groupKey = isVideo ? `${baseName}_video` : baseName;
@@ -196,7 +197,7 @@ export const getFolderImages = cache(async (folderId) => {
     
     if (['cr2', 'cr3', 'nef', 'arw', 'dng', 'raf'].includes(ext)) {
       grouped[groupKey].raw = file;
-    } else if (file.mimeType && (file.mimeType.startsWith('image/') || isVideo)) {
+    } else if (isVideo || (file.mimeType && file.mimeType.startsWith('image/'))) {
       grouped[groupKey].viewable = file;
     }
   }
@@ -205,7 +206,9 @@ export const getFolderImages = cache(async (folderId) => {
   for (const baseName in grouped) {
     const { viewable, raw } = grouped[baseName];
     if (viewable) {
-      const isVideo = viewable.mimeType && viewable.mimeType.startsWith('video/');
+      const viewableExt = viewable.name.split('.').pop().toLowerCase();
+      const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v'];
+      const isVideo = (viewable.mimeType && viewable.mimeType.startsWith('video/')) || videoExtensions.includes(viewableExt);
       const baseCdnUrl = viewable.thumbnailLink ? viewable.thumbnailLink.replace(/=[^=]*$/, '') : null;
       
       // If no thumbnail exists and it's a video, don't fall back to the raw file for the grid thumbnail

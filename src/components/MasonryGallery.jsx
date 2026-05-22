@@ -76,7 +76,7 @@ export default function MasonryGallery({ images, onImageClick, selectionMode, se
                 </motion.div>
               )}
               
-              {image.type === 'video' && (
+              {(image.type === 'video' || image.type === 'embed') && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="bg-black/40 backdrop-blur-sm rounded-full p-3 sm:p-4 border border-white/20 shadow-xl group-hover:scale-110 transition-transform duration-300">
                     <svg className="w-4 h-4 sm:w-6 sm:h-6 text-white translate-x-[2px]" fill="currentColor" viewBox="0 0 24 24">

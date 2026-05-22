@@ -153,7 +153,16 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
             >
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
-            {image.type === 'video' ? (
+            {image.type === 'embed' ? (
+              <div className="w-full h-full max-w-5xl max-h-[80vh] aspect-video drop-shadow-2xl bg-black">
+                <iframe
+                  src={image.embedUrl}
+                  className="w-full h-full"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : image.type === 'video' ? (
               <video
                 src={image.url}
                 controls

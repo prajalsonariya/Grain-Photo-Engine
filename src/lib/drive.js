@@ -211,6 +211,21 @@ export const getFolderImages = cache(async (folderId) => {
       const isVideo = (viewable.mimeType && viewable.mimeType.startsWith('video/')) || videoExtensions.includes(viewableExt);
       const baseCdnUrl = viewable.thumbnailLink ? viewable.thumbnailLink.replace(/=[^=]*$/, '') : null;
       
+      // Parse description for YouTube or Vimeo links
+      let embedUrl = null;
+      let isEmbed = false;
+      if (viewable.description) {
+        const ytMatch = viewable.description.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/i);
+        const vimeoMatch = viewable.description.match(/(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/i);
+        if (ytMatch) {
+          isEmbed = true;
+          embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
+        } else if (vimeoMatch) {
+          isEmbed = true;
+          embedUrl = `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
+        }
+      }
+
       // If no thumbnail exists and it's a video, don't fall back to the raw file for the grid thumbnail
       // because an <img> tag cannot display an .mp4 file.
       let cdnUrl = null;
@@ -219,9 +234,15 @@ export const getFolderImages = cache(async (folderId) => {
       } else if (!isVideo) {
         cdnUrl = `/api/image/${viewable.id}`;
       }
+      
+      let type = 'image';
+      if (isEmbed) type = 'embed';
+      else if (isVideo) type = 'video';
+
       images.push({
         ...viewable,
-        type: isVideo ? 'video' : 'image',
+        type,
+        embedUrl,
         url: `/api/image/${viewable.id}?mimeType=${encodeURIComponent(viewable.mimeType)}&filename=${encodeURIComponent(viewable.name)}`,
         cdnUrl,
         baseCdnUrl,

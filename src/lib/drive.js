@@ -214,15 +214,22 @@ export const getFolderImages = cache(async (folderId) => {
       // Parse description for YouTube or Vimeo links
       let embedUrl = null;
       let isEmbed = false;
+      let cleanDescription = viewable.description;
+      
       if (viewable.description) {
-        const ytMatch = viewable.description.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/i);
-        const vimeoMatch = viewable.description.match(/(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/i);
+        const ytRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/i;
+        const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/i;
+        const ytMatch = viewable.description.match(ytRegex);
+        const vimeoMatch = viewable.description.match(vimeoRegex);
+        
         if (ytMatch) {
           isEmbed = true;
           embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
+          cleanDescription = cleanDescription.replace(ytRegex, '').trim();
         } else if (vimeoMatch) {
           isEmbed = true;
           embedUrl = `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
+          cleanDescription = cleanDescription.replace(vimeoRegex, '').trim();
         }
       }
 
@@ -241,6 +248,7 @@ export const getFolderImages = cache(async (folderId) => {
 
       images.push({
         ...viewable,
+        description: cleanDescription || null,
         type,
         embedUrl,
         url: `/api/image/${viewable.id}?mimeType=${encodeURIComponent(viewable.mimeType)}&filename=${encodeURIComponent(viewable.name)}`,

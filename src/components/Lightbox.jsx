@@ -186,7 +186,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
               className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-white/90 hover:bg-white text-black text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-colors rounded-sm sm:min-w-[180px]"
             >
               <Download className="w-4 h-4" />
-              Download Image
+              {image.type === 'video' ? 'Download Video' : 'Download Image'}
             </a>
 
             {/* Share to WhatsApp — copies message + page URL to clipboard */}

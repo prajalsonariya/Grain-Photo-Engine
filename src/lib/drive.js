@@ -16,6 +16,13 @@ function cdnProxy(baseCdnUrl, size) {
   return `/api/thumbnail?url=${encodeURIComponent(cdnUrl)}`;
 }
 
+function extractId(str) {
+  if (!str) return null;
+  // If the user accidentally pasted a full Google Drive URL instead of the ID, extract the 33-char ID
+  const match = str.match(/[-\w]{25,}/);
+  return match ? match[0] : str;
+}
+
 async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
   const options = {
     q: `'${rootFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
@@ -117,7 +124,7 @@ async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
 
 export const getFolders = cache(async () => {
   const drive = google.drive({ version: 'v3', auth: getAuth() });
-  const rootFolderId = process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID;
+  const rootFolderId = extractId(process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID);
 
   // Check if root folder has direct images
   const rootImagesRes = await drive.files.list({
@@ -149,7 +156,7 @@ export const getFolders = cache(async () => {
 
 export const getPrivateFolders = cache(async (limit = null) => {
   const drive = google.drive({ version: 'v3', auth: getAuth() });
-  const rootFolderId = process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID;
+  const rootFolderId = extractId(process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID);
 
   if (!rootFolderId || rootFolderId === 'your_private_folder_id_here') {
     return { folders: [], hasMore: false };
@@ -362,7 +369,8 @@ function getDefaultConfig() {
 }
 
 export const getConfig = cache(async () => {
-  const rootFolderId = process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID;
+  const rootFolderId = extractId(process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID);
+  const publicRootId = extractId(process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID);
 
   // Proceed even if private root is missing, because we can check the public root now
 
@@ -383,9 +391,9 @@ export const getConfig = cache(async () => {
     }
 
     // Fallback: If not in private root, try public root
-    if (files.length === 0 && process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID) {
+    if (files.length === 0 && publicRootId) {
       searchRes = await drive.files.list({
-        q: `'${process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID}' in parents and name = 'config.json' and trashed = false`,
+        q: `'${publicRootId}' in parents and name = 'config.json' and trashed = false`,
         fields: 'files(id, name, mimeType)',
         pageSize: 1,
       });

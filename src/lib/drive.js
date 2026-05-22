@@ -187,12 +187,17 @@ export const getFolderImages = cache(async (folderId) => {
     const baseName = parts.length > 1 ? parts.slice(0, -1).join('.') : file.name;
     const ext = parts.length > 1 ? parts.pop().toLowerCase() : '';
     
-    if (!grouped[baseName]) grouped[baseName] = { viewable: null, raw: null };
+    const isVideo = file.mimeType && file.mimeType.startsWith('video/');
+    
+    // Group videos separately from images so they don't overwrite each other if they share a name
+    const groupKey = isVideo ? `${baseName}_video` : baseName;
+    
+    if (!grouped[groupKey]) grouped[groupKey] = { viewable: null, raw: null };
     
     if (['cr2', 'cr3', 'nef', 'arw', 'dng', 'raf'].includes(ext)) {
-      grouped[baseName].raw = file;
-    } else if (file.mimeType && (file.mimeType.startsWith('image/') || file.mimeType.startsWith('video/'))) {
-      grouped[baseName].viewable = file;
+      grouped[groupKey].raw = file;
+    } else if (file.mimeType && (file.mimeType.startsWith('image/') || isVideo)) {
+      grouped[groupKey].viewable = file;
     }
   }
 
@@ -200,9 +205,17 @@ export const getFolderImages = cache(async (folderId) => {
   for (const baseName in grouped) {
     const { viewable, raw } = grouped[baseName];
     if (viewable) {
-      const isVideo = viewable.mimeType.startsWith('video/');
+      const isVideo = viewable.mimeType && viewable.mimeType.startsWith('video/');
       const baseCdnUrl = viewable.thumbnailLink ? viewable.thumbnailLink.replace(/=[^=]*$/, '') : null;
-      const cdnUrl = baseCdnUrl ? cdnProxy(baseCdnUrl, 's400-rw') : `/api/image/${viewable.id}`;
+      
+      // If no thumbnail exists and it's a video, don't fall back to the raw file for the grid thumbnail
+      // because an <img> tag cannot display an .mp4 file.
+      let cdnUrl = null;
+      if (baseCdnUrl) {
+        cdnUrl = cdnProxy(baseCdnUrl, 's400-rw');
+      } else if (!isVideo) {
+        cdnUrl = `/api/image/${viewable.id}`;
+      }
       images.push({
         ...viewable,
         type: isVideo ? 'video' : 'image',
@@ -267,14 +280,24 @@ export const getFolderImages = cache(async (folderId) => {
   };
 });
 
-export const getImageStream = cache(async (fileId) => {
+export const getImageStream = cache(async (fileId, rangeHeader = null) => {
   const drive = google.drive({ version: 'v3', auth: getAuth() });
   
+  const fetchOptions = { responseType: 'stream' };
+  if (rangeHeader) {
+    fetchOptions.headers = { Range: rangeHeader };
+  }
+
   const response = await drive.files.get(
     { fileId, alt: 'media' },
-    { responseType: 'stream' }
+    fetchOptions
   );
-  return response.data;
+  
+  return {
+    stream: response.data,
+    headers: response.headers,
+    status: response.status
+  };
 });
 
 export async function getFolderDetails(folderId) {

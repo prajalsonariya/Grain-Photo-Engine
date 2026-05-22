@@ -39,18 +39,20 @@ export default function MasonryGallery({ images, onImageClick, selectionMode, se
               style={{ '--ar': aspectRatio, '--w': `${aspectRatio * 150}px`, maxWidth: '100%' }}
               onClick={() => handleClick(index, image)}
             >
-              <img 
-                 src={image.cdnUrl || image.url}
-                 alt={image.description || image.name}
-                 loading={index < 6 ? "eager" : "lazy"}
-                 decoding="async"
-                 fetchPriority={index < 6 ? "high" : "auto"}
-                 className={`absolute inset-0 w-full h-full object-cover transition-all duration-200 ease-out ${
-                   isSelected 
-                     ? 'brightness-75' 
-                     : 'group-hover:opacity-75'
-                 }`}
-               />
+              {(image.cdnUrl || (image.type !== 'video' && image.url)) && (
+                <img 
+                   src={image.cdnUrl || image.url}
+                   alt={image.description || image.name}
+                   loading={index < 6 ? "eager" : "lazy"}
+                   decoding="async"
+                   fetchPriority={index < 6 ? "high" : "auto"}
+                   className={`absolute inset-0 w-full h-full object-cover transition-all duration-200 ease-out ${
+                     isSelected 
+                       ? 'brightness-75' 
+                       : 'group-hover:opacity-75'
+                   }`}
+                 />
+              )}
 
               {/* Selection checkbox */}
               {selectionMode && (

@@ -1,6 +1,44 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter, useSegments } from 'expo-router';
+import { Platform } from 'react-native';
+
+const setItemAsync = async (key, value) => {
+  if (Platform.OS === 'web') {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.error('Local storage is unavailable:', e);
+    }
+  } else {
+    await SecureStore.setItemAsync(key, value);
+  }
+};
+
+const getItemAsync = async (key) => {
+  if (Platform.OS === 'web') {
+    try {
+      return localStorage.getItem(key);
+    } catch (e) {
+      console.error('Local storage is unavailable:', e);
+      return null;
+    }
+  } else {
+    return await SecureStore.getItemAsync(key);
+  }
+};
+
+const deleteItemAsync = async (key) => {
+  if (Platform.OS === 'web') {
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      console.error('Local storage is unavailable:', e);
+    }
+  } else {
+    await SecureStore.deleteItemAsync(key);
+  }
+};
 
 const AuthContext = createContext(null);
 
@@ -39,7 +77,7 @@ export function AuthProvider({ children }) {
 
   const loadToken = async () => {
     try {
-      const storedToken = await SecureStore.getItemAsync('apiToken');
+      const storedToken = await getItemAsync('apiToken');
       if (storedToken) {
         await verifyToken(storedToken);
       }
@@ -63,13 +101,11 @@ export function AuthProvider({ children }) {
         setUser(data.user);
         setIsSuperAdmin(data.isSuperAdmin);
       } else {
-        await SecureStore.deleteItemAsync('apiToken');
+        await deleteItemAsync('apiToken');
         setToken(null);
       }
     } catch (e) {
       console.error(e);
-      // Assume network error, keep token for now or force logout?
-      // For local dev, we will keep it.
       setToken(storedToken);
     }
   };
@@ -83,7 +119,7 @@ export function AuthProvider({ children }) {
       });
       const data = await res.json();
       if (res.ok) {
-        await SecureStore.setItemAsync('apiToken', newToken);
+        await setItemAsync('apiToken', newToken);
         setToken(newToken);
         setUser(data.user);
         setIsSuperAdmin(data.isSuperAdmin);
@@ -97,7 +133,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await SecureStore.deleteItemAsync('apiToken');
+    await deleteItemAsync('apiToken');
     setToken(null);
     setUser(null);
     setIsSuperAdmin(false);

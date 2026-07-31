@@ -78,3 +78,19 @@ export async function initializeDrive(username) {
     return { error: "Failed to create folders in Google Drive. Ensure you granted permissions." }
   }
 }
+
+import crypto from 'crypto';
+
+export async function generateMobileApiKey() {
+  const session = await getServerSession(authOptions)
+  if (!session) return { error: "Unauthorized" }
+
+  const token = crypto.randomBytes(24).toString('hex');
+  
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: { apiToken: token }
+  })
+
+  return { token }
+}

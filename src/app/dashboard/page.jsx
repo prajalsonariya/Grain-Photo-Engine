@@ -3,6 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import DashboardClient from "./DashboardClient"
+import MobileKeyClient from "./MobileKeyClient"
 import { initializeDrive } from "./actions"
 
 export default async function DashboardPage() {
@@ -60,6 +61,8 @@ export default async function DashboardPage() {
               </div>
               <a href={`https://drive.google.com/drive/folders/${user.privateFolderId}`} target="_blank" className="text-blue-400 hover:text-blue-300 text-sm">Open in Google Drive →</a>
             </div>
+
+            <MobileKeyClient user={user} />
           </div>
         )}
       </div>

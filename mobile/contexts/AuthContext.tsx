@@ -17,7 +17,7 @@ export function AuthProvider({ children }) {
   const segments = useSegments();
   const router = useRouter();
 
-  const API_URL = 'http://10.0.2.2:3000/api/mobile'; // For Android emulator. If real device, this needs to be the local IP or Vercel URL.
+  const API_URL = 'http://192.168.1.11:3000/api/mobile'; // Configured for Expo Go on physical device (LAN IP)
 
   useEffect(() => {
     loadToken();

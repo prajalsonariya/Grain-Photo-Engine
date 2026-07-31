@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import FolderCard from '@/components/FolderCard';
 
-export default function HomeClient({ folders, heroTitle = 'Albums' }) {
+export default function HomeClient({ folders, heroTitle = 'Albums', username }) {
   const [hoveredFolder, setHoveredFolder] = useState(null);
 
   return (
@@ -40,7 +40,7 @@ export default function HomeClient({ folders, heroTitle = 'Albums' }) {
               onMouseEnter={() => setHoveredFolder(folder)}
               onMouseLeave={() => setHoveredFolder(null)}
             >
-              <FolderCard folder={folder} />
+              <FolderCard folder={folder} basePath={`/${username}/gallery`} />
             </div>
           ))}
         </div>

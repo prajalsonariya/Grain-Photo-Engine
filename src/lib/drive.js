@@ -1,14 +1,16 @@
 import { google } from 'googleapis';
 import { cache } from 'react';
 
-function getAuth() {
-  return new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    },
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+export function getOAuthClient(accessToken, refreshToken) {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET
+  );
+  oauth2Client.setCredentials({ 
+    access_token: accessToken,
+    refresh_token: refreshToken
   });
+  return oauth2Client;
 }
 
 function cdnProxy(baseCdnUrl, size) {
@@ -23,7 +25,7 @@ function extractId(str) {
   return match ? match[0] : str;
 }
 
-async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
+async function fetchFoldersWithThumbnails(drive, username, rootFolderId, limit = null) {
   const options = {
     q: `'${rootFolderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
     fields: 'files(id, name, createdTime)',
@@ -37,6 +39,17 @@ async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
   const foldersRes = await drive.files.list(options);
 
   const rawFiles = foldersRes.data.files || [];
+  console.log(`[DEBUG] fetchFoldersWithThumbnails for rootFolderId: ${rootFolderId}`);
+  console.log(`[DEBUG] Google Drive returned ${rawFiles.length} folders.`);
+  if (rawFiles.length === 0) {
+    // If 0, let's just do a generic search in this folder to see if ANY files exist
+    const anyFilesRes = await drive.files.list({
+      q: `'${rootFolderId}' in parents and trashed = false`,
+      fields: 'files(id, name, mimeType)'
+    });
+    console.log(`[DEBUG] Generic search in ${rootFolderId} returned ${anyFilesRes.data.files?.length || 0} items. MimeTypes:`, anyFilesRes.data.files?.map(f => f.mimeType));
+  }
+  
   const hasMore = limit ? rawFiles.length > limit : false;
   const filesToProcess = limit ? rawFiles.slice(0, limit) : rawFiles;
 
@@ -104,7 +117,7 @@ async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
     let fallbackUrl = null;
 
     if (targetImage) {
-      fallbackUrl = `/api/image/${targetImage.id}`;
+      fallbackUrl = `/api/image/${username}/${targetImage.id}`;
       baseCdnUrl = targetImage.thumbnailLink ? targetImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
       thumbnailUrl = baseCdnUrl ? cdnProxy(baseCdnUrl, 's200-rw') : fallbackUrl;
     }
@@ -122,10 +135,9 @@ async function fetchFoldersWithThumbnails(drive, rootFolderId, limit = null) {
   return { folders, hasMore };
 }
 
-export const getFolders = cache(async () => {
-  const drive = google.drive({ version: 'v3', auth: getAuth() });
-  const rootFolderId = extractId(process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID);
-
+export const getFolders = cache(async (oauthClient, username, rootFolderId) => {
+  const drive = google.drive({ version: 'v3', auth: oauthClient });
+  
   // Check if root folder has direct images
   const rootImagesRes = await drive.files.list({
     q: `'${rootFolderId}' in parents and mimeType contains 'image/' and trashed = false`,
@@ -138,7 +150,7 @@ export const getFolders = cache(async () => {
 
   if (rootImagesRes.data.files && rootImagesRes.data.files.length > 0) {
     const coverImage = rootImagesRes.data.files.find(f => f.name.toLowerCase().includes('cover')) || rootImagesRes.data.files[0];
-    let fallbackUrl = `/api/image/${coverImage.id}`;
+    let fallbackUrl = `/api/image/${username}/${coverImage.id}`;
     let baseCdnUrl = coverImage.thumbnailLink ? coverImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
     
     folders.push({
@@ -150,28 +162,27 @@ export const getFolders = cache(async () => {
     });
   }
 
-  const { folders: subfolders } = await fetchFoldersWithThumbnails(drive, rootFolderId);
+  const { folders: subfolders } = await fetchFoldersWithThumbnails(drive, username, rootFolderId);
   return [...folders, ...subfolders].sort((a, b) => a.name.localeCompare(b.name));
 });
 
-export const getPrivateFolders = cache(async (limit = null) => {
-  const drive = google.drive({ version: 'v3', auth: getAuth() });
-  const rootFolderId = extractId(process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID);
+export const getPrivateFolders = cache(async (oauthClient, username, rootFolderId, limit = null) => {
+  const drive = google.drive({ version: 'v3', auth: oauthClient });
 
   if (!rootFolderId || rootFolderId === 'your_private_folder_id_here') {
     return { folders: [], hasMore: false };
   }
 
   try {
-    return await fetchFoldersWithThumbnails(drive, rootFolderId, limit);
+    return await fetchFoldersWithThumbnails(drive, username, rootFolderId, limit);
   } catch (err) {
     console.error('Error fetching private folders:', err);
     return { folders: [], hasMore: false };
   }
 });
 
-export const getFolderImages = cache(async (folderId) => {
-  const drive = google.drive({ version: 'v3', auth: getAuth() });
+export const getFolderImages = cache(async (oauthClient, username, folderId) => {
+  const drive = google.drive({ version: 'v3', auth: oauthClient });
   
   const filesRes = await drive.files.list({
     q: `'${folderId}' in parents and trashed = false`,
@@ -245,8 +256,9 @@ export const getFolderImages = cache(async (folderId) => {
       let cdnUrl = null;
       if (baseCdnUrl) {
         cdnUrl = cdnProxy(baseCdnUrl, 's400-rw');
-      } else if (!isVideo) {
-        cdnUrl = `/api/image/${viewable.id}`;
+      }
+      if (!baseCdnUrl || isVideo) {
+        cdnUrl = `/api/image/${username}/${viewable.id}`;
       }
       
       let type = 'image';
@@ -258,7 +270,7 @@ export const getFolderImages = cache(async (folderId) => {
         description: cleanDescription || null,
         type,
         embedUrl,
-        url: `/api/image/${viewable.id}?mimeType=${encodeURIComponent(viewable.mimeType)}&filename=${encodeURIComponent(viewable.name)}`,
+        url: `/api/image/${username}/${viewable.id}?mimeType=${encodeURIComponent(viewable.mimeType)}&filename=${encodeURIComponent(viewable.name)}`,
         cdnUrl,
         baseCdnUrl,
         rawFileId: raw ? raw.id : null,
@@ -319,8 +331,8 @@ export const getFolderImages = cache(async (folderId) => {
   };
 });
 
-export const getImageStream = cache(async (fileId, rangeHeader = null) => {
-  const drive = google.drive({ version: 'v3', auth: getAuth() });
+export const getImageStream = cache(async (oauthClient, fileId, rangeHeader = null) => {
+  const drive = google.drive({ version: 'v3', auth: oauthClient });
   
   const fetchOptions = { responseType: 'stream' };
   if (rangeHeader) {
@@ -339,9 +351,8 @@ export const getImageStream = cache(async (fileId, rangeHeader = null) => {
   };
 });
 
-export async function getFolderDetails(folderId) {
-
-  const drive = google.drive({ version: 'v3', auth: getAuth() });
+export const getFolderDetails = cache(async (oauthClient, folderId) => {
+  const drive = google.drive({ version: 'v3', auth: oauthClient });
   try {
     const res = await drive.files.get({
       fileId: folderId,
@@ -352,130 +363,18 @@ export async function getFolderDetails(folderId) {
     console.error('Error fetching folder details:', err);
     return { id: folderId, name: 'Gallery' };
   }
-}
-
-// ---------------------------------------------------------------------------
-// Config service — reads config.json from the private Drive root folder
-// ---------------------------------------------------------------------------
-
-function getDefaultConfig() {
-  return {
-    photographers: ['Studio'],
-    businessName: null,
-    heroTitle: 'Albums',
-    whatsapp: null,
-    socials: {},
-  };
-}
-
-export const getConfig = cache(async () => {
-  const rootFolderId = extractId(process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID);
-  const publicRootId = extractId(process.env.GOOGLE_DRIVE_PUBLIC_ROOT_ID);
-
-  // Proceed even if private root is missing, because we can check the public root now
-
-  try {
-    const drive = google.drive({ version: 'v3', auth: getAuth() });
-
-    let files = [];
-    let searchRes;
-
-    // 1. Try private root if configured
-    if (rootFolderId && rootFolderId !== 'your_private_folder_id_here') {
-      searchRes = await drive.files.list({
-        q: `'${rootFolderId}' in parents and name = 'config.json' and trashed = false`,
-        fields: 'files(id, name, mimeType)',
-        pageSize: 1,
-      });
-      files = searchRes.data.files || [];
-    }
-
-    // Fallback: If not in private root, try public root
-    if (files.length === 0 && publicRootId) {
-      searchRes = await drive.files.list({
-        q: `'${publicRootId}' in parents and name = 'config.json' and trashed = false`,
-        fields: 'files(id, name, mimeType)',
-        pageSize: 1,
-      });
-      files = searchRes.data.files || [];
-    }
-
-    if (files.length === 0) {
-      console.warn('[getConfig] config.json not found in private or public root. Using default fallback.');
-      return getDefaultConfig();
-    }
-
-    const file = files[0];
-    const fileId = file.id;
-    let response;
-
-    if (file.mimeType === 'application/vnd.google-apps.document') {
-      // It's a Google Doc, so we must export it as plain text
-      response = await drive.files.export(
-        { fileId, mimeType: 'text/plain' },
-        { responseType: 'stream' }
-      );
-    } else {
-      // It's a regular file
-      response = await drive.files.get(
-        { fileId, alt: 'media' },
-        { responseType: 'stream' }
-      );
-    }
-
-    // Consume the stream
-    const chunks = [];
-    for await (const chunk of response.data) {
-      chunks.push(chunk);
-    }
-    let text = Buffer.concat(chunks).toString('utf-8');
-
-    // If it was a Google doc, it sometimes includes BOM or weird quotes
-    text = text.replace(/^\uFEFF/, ''); // Strip BOM
-    text = text.replace(/[\u201C\u201D]/g, '"'); // replace smart quotes
-    
-    // Strip '//' comments to support user notes in the Drive config
-    let sanitizedText = text.replace(/^\s*\/\/.*$/gm, '');
-    
-    // Strip trailing commas that might occur if the last item is commented out
-    sanitizedText = sanitizedText.replace(/,\s*([\]}])/g, '$1');
-
-    const raw = JSON.parse(sanitizedText);
-
-    return {
-      photographers: Array.isArray(raw.photographers) && raw.photographers.length > 0
-        ? raw.photographers
-        : ['Studio'],
-      businessName: typeof raw.businessName === 'string' && raw.businessName.trim()
-        ? raw.businessName.trim()
-        : null,
-      heroTitle: typeof raw.heroTitle === 'string' && raw.heroTitle.trim()
-        ? raw.heroTitle.trim()
-        : 'Albums',
-      whatsapp: typeof raw.whatsapp === 'string' && raw.whatsapp.trim()
-        ? raw.whatsapp.trim()
-        : null,
-      phone: typeof raw.phone === 'string' && raw.phone.trim()
-        ? raw.phone.trim()
-        : null,
-      socials: raw.socials && typeof raw.socials === 'object' ? raw.socials : {},
-    };
-  } catch (err) {
-    console.error('[getConfig] Failed to load config.json from Drive:', err.message);
-    return getDefaultConfig();
-  }
 });
 
 // ---------------------------------------------------------------------------
 // Check if a folder ID exists anywhere inside the private root.
 // Uses a recursive Drive query — reliable, single API call, no parent traversal.
-export async function isFolderInPrivateRoot(folderId) {
-  const rootId = process.env.GOOGLE_DRIVE_PRIVATE_ROOT_ID;
+export async function isFolderInPrivateRoot(oauthClient, privateRootId, folderId) {
+  const rootId = privateRootId;
   if (!rootId) return false;
   // Direct child of private root
   if (folderId === rootId) return false; // root itself is not a valid gallery
 
-  const drive = google.drive({ version: 'v3', auth: getAuth() });
+  const drive = google.drive({ version: 'v3', auth: oauthClient });
   try {
     // Walk up parents until we hit the private root or run out of parents
     let currentId = folderId;

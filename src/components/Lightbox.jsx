@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useParams } from 'next/navigation';
 
 // Inline WhatsApp SVG icon
 function WhatsAppIcon({ className }) {
@@ -15,6 +16,7 @@ function WhatsAppIcon({ className }) {
 }
 
 export default function Lightbox({ images, currentIndex, onClose, onIndexChange, whatsapp }) {
+  const { username } = useParams() || {};
   const [mounted, setMounted] = useState(false);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
@@ -226,7 +228,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
             {/* Download RAW */}
             {image.rawFileId && (
               <a
-                href={`/api/image/${image.rawFileId}?download=true&filename=${encodeURIComponent(image.rawFileName || 'RAW_file')}`}
+                href={`/api/image/${username || 'guest'}/${image.rawFileId}?download=true&filename=${encodeURIComponent(image.rawFileName || 'RAW_file')}`}
                 download={image.rawFileName || `RAW_${image.name}`}
                 className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/10 text-white/70 hover:text-white text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium hover:bg-white/5 transition-colors rounded-sm sm:min-w-[180px]"
               >

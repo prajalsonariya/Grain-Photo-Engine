@@ -62,20 +62,25 @@ function PortfolioIcon({ className }) {
   );
 }
 
-export default async function Header() {
-  const config = await getConfig();
-  const isAgency = process.env.NEXT_PUBLIC_CLIENT_PLAN === 'agency';
+export default async function Header({ config = null, isAgency = false, homeUrl = '/' }) {
+  if (!config) {
+    return (
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/80 backdrop-blur-md border-b border-white/5 transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-center">
+          <Link href={homeUrl} className="text-sm tracking-[0.3em] font-light uppercase text-white hover:text-neutral-300 transition-colors">
+            Loading...
+          </Link>
+        </div>
+      </header>
+    );
+  }
 
   // ── Logo text resolution ──────────────────────────────────────────────────
   let displayName;
   if (isAgency && config.businessName) {
     displayName = config.businessName;
-  } else if (isAgency) {
-    displayName = config.photographers.join(' x ');
   } else {
-    // freelancer & portfolio tiers: strictly first element only,
-    // explicitly blocking custom logos and extra socials.
-    displayName = config.photographers[0] || 'Studio';
+    displayName = config.name || 'Studio';
   }
 
   // ── Contact CTA URL ──────────────────────────────────────────────────────
@@ -83,15 +88,20 @@ export default async function Header() {
   let contactType = null;
   
   if (config.whatsapp) {
-    contactUrl = `https://wa.me/${config.whatsapp}?text=Hi!%20I%20saw%20your%20work%20on%20your%20gallery%20hub%20and%20wanted%20to%20inquire%20about%20booking%20a%20session.`;
+    contactUrl = `https://wa.me/${config.whatsapp.replace(/\D/g, '')}?text=Hi!%20I%20saw%20your%20work%20on%20your%20gallery%20hub%20and%20wanted%20to%20inquire%20about%20booking%20a%20session.`;
     contactType = 'whatsapp';
   } else if (config.phone) {
-    contactUrl = `tel:${config.phone}`;
+    contactUrl = `tel:${config.phone.replace(/\D/g, '')}`;
     contactType = 'phone';
   }
 
   // ── Socials (agency-only) ─────────────────────────────────────────────────
-  const socials = isAgency ? (config.socials || {}) : {};
+  const socials = isAgency ? {
+    instagram: config.instagram,
+    facebook: config.facebook,
+    snapchat: config.snapchat,
+    portfolio: config.portfolio
+  } : {};
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/80 backdrop-blur-md border-b border-white/5 transition-all duration-300">
@@ -102,7 +112,7 @@ export default async function Header() {
 
         {/* ── Center logo ── */}
         <Link
-          href="/"
+          href={homeUrl}
           className="flex items-center justify-center group absolute left-1/2 -translate-x-1/2"
         >
           {isAgency && config.logoUrl ? (

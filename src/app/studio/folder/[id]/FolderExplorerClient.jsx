@@ -40,6 +40,10 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
   const [copiedLink, setCopiedLink] = useState(false);
   const [coverSuccessId, setCoverSuccessId] = useState(null);
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const lightboxIndexRef = useRef(lightboxIndex);
+  useEffect(() => {
+    lightboxIndexRef.current = lightboxIndex;
+  }, [lightboxIndex]);
 
   // Multi-select state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -121,8 +125,13 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
   // Listen to browser Back/Forward buttons
   useEffect(() => {
     const handlePopState = (e) => {
+      // If Lightbox is open, Back was consumed by closing Lightbox; do not change folder
+      if (lightboxIndexRef.current !== null) {
+        setLightboxIndex(null);
+        return;
+      }
       const targetId = e.state?.folderId;
-      if (targetId) {
+      if (targetId && targetId !== currentFolder.id) {
         const cached = getCachedFolder(targetId);
         if (cached) {
           setCurrentFolder(cached.folder);
@@ -141,7 +150,7 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [navigateToFolder]);
+  }, [currentFolder.id, navigateToFolder]);
 
   // Idle prefetching for subfolders
   useEffect(() => {

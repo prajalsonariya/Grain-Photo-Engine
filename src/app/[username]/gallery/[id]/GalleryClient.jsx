@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import MasonryGallery from '@/components/MasonryGallery';
 import SortBar from '@/components/SortBar';
@@ -34,6 +34,10 @@ export default function GalleryClient({
   );
   const [isLoadingFolder, setIsLoadingFolder] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(null);
+  const selectedIndexRef = useRef(selectedIndex);
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
   const [sortOrder, setSortOrder] = useState('asc');
   
   // Selection state
@@ -116,8 +120,14 @@ export default function GalleryClient({
   // Listen to browser Back/Forward
   useEffect(() => {
     const handlePopState = (e) => {
+      // If Lightbox is open, Back was consumed by closing Lightbox; do not change folder
+      if (selectedIndexRef.current !== null) {
+        setSelectedIndex(null);
+        updateUrlForImage(null, sortedImages);
+        return;
+      }
       const targetId = e.state?.folderId;
-      if (targetId) {
+      if (targetId && targetId !== currentFolder?.id) {
         const cached = getCachedFolder(targetId);
         if (cached) {
           setCurrentFolder(cached.folder);
@@ -136,7 +146,7 @@ export default function GalleryClient({
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [navigateToFolder]);
+  }, [currentFolder?.id, navigateToFolder, sortedImages]);
 
   // Updates browser URL with ?img=... without triggering full-page router reloads
   const updateUrlForImage = useCallback((index, currentSortedImages) => {
@@ -149,7 +159,7 @@ export default function GalleryClient({
     }
     const newSearch = params.toString();
     const newPath = window.location.pathname + (newSearch ? `?${newSearch}` : '');
-    window.history.replaceState(null, '', newPath);
+    window.history.replaceState(window.history.state, '', newPath);
   }, []);
 
   const sortedSubfolders = useMemo(() => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye, Loader2, Info, Zap } from 'lucide-react';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
 
@@ -28,9 +28,9 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
   const [isOriginalLoading, setIsOriginalLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Viewport and Phone Rotation States
+  // Viewport and Phone Physical Tilt States
   const [viewportDims, setViewportDims] = useState({ width: 0, height: 0 });
-  const [isAutoDeviceRotated, setIsAutoDeviceRotated] = useState(false);
+  const [devicePhysicalOrientation, setDevicePhysicalOrientation] = useState('portrait'); // 'portrait', 'landscape-right', 'landscape-left'
   const [rotationAngle, setRotationAngle] = useState(90);
   const [naturalAspect, setNaturalAspect] = useState(null);
 
@@ -52,13 +52,11 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
     };
   }, []);
 
-  // Reset states on index change
+  // Reset image-specific toggle states on index change (preserve physical tilt orientation!)
   useEffect(() => {
     setShowOriginal(false);
     setOriginalLoaded(false);
     setIsOriginalLoading(false);
-    setIsAutoDeviceRotated(false);
-    setRotationAngle(90);
     setNaturalAspect(null);
   }, [currentIndex]);
 
@@ -69,6 +67,32 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
   const handlePrev = useCallback(() => {
     onIndexChange((currentIndex - 1 + images.length) % images.length);
   }, [currentIndex, images.length, onIndexChange]);
+
+  const closedByPopStateRef = useRef(false);
+
+  // Android Back button & browser back gesture integration
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Push an overlay history state so the Android physical/gesture Back button closes the Lightbox
+    window.history.pushState({ ...window.history.state, isLightboxOpen: true }, '');
+
+    const handlePopState = () => {
+      closedByPopStateRef.current = true;
+      onClose();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      // If closed via 'X' button, swipe down, or Escape (not by browser back button),
+      // cleanly pop the pushed state so history stays synchronized
+      if (!closedByPopStateRef.current) {
+        window.history.back();
+      }
+    };
+  }, [onClose]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -110,81 +134,141 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
   const image = images[currentIndex];
 
   const meta = image?.imageMediaMetadata || {};
-  const isLandscapePhoto = (meta.width && meta.height)
-    ? (meta.width > meta.height)
-    : (naturalAspect ? naturalAspect > 1.05 : false);
 
-  // Mobile landscape: viewport width > height and short height (typical phone in landscape: 360-480px)
-  const isMobileLandscape = viewportDims.width > viewportDims.height && viewportDims.height > 0 && viewportDims.height <= 550;
-  // If OS rotated to landscape, cancel CSS rotation; otherwise rotate automatically when phone is tilted sideways
-  const isRotated = !isMobileLandscape && isAutoDeviceRotated;
+  // Immediate probe of image natural aspect ratio (fast memory cache or small CDN probe)
+  useEffect(() => {
+    if (!image) return;
+    if (meta.width && meta.height) {
+      setNaturalAspect(Number(meta.width) / Number(meta.height));
+      return;
+    }
+    const probeUrl = image.tempUrl || (image.baseCdnUrl ? `${image.baseCdnUrl}=s800` : image.url);
+    if (!probeUrl) return;
+    const probe = new Image();
+    probe.referrerPolicy = 'no-referrer';
+    probe.onload = () => {
+      if (probe.naturalWidth && probe.naturalHeight) {
+        setNaturalAspect(probe.naturalWidth / probe.naturalHeight);
+      }
+    };
+    probe.src = probeUrl;
+  }, [image, meta.width, meta.height]);
 
-  // Accelerometer / Gyroscope auto-rotation detection (when Portrait Lock is on)
+  // Determine if photo is landscape/panoramic or square
+  const isLandscapePhoto = useMemo(() => {
+    if (meta.width && meta.height) {
+      return Number(meta.width) >= Number(meta.height);
+    }
+    if (naturalAspect !== null) {
+      return naturalAspect >= 0.95;
+    }
+    return true; // Default to true so rotation is unblocked while probing
+  }, [meta.width, meta.height, naturalAspect]);
+
+  // Detect whether OS/screen is physically landscape or widescreen
+  const isScreenLandscape = (viewportDims.width > viewportDims.height && viewportDims.height > 0) ||
+    (typeof window !== 'undefined' && (window.screen?.orientation?.type ? window.screen.orientation.type.startsWith('landscape') : false));
+
+  const isTouchDevice = typeof window !== 'undefined' && (
+    'ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)
+  );
+
+  // Mobile landscape: screen orientation physically landscape on a phone/touch device or short desktop
+  const isMobileLandscape = isScreenLandscape && (isTouchDevice || (viewportDims.height > 0 && viewportDims.height <= 650));
+
+  // Auto CSS rotation: when Portrait Lock is ON in phone OS, but phone is tilted sideways and photo is landscape
+  const isRotated = !isScreenLandscape && (devicePhysicalOrientation !== 'portrait') && isLandscapePhoto;
+
+  // Immersive landscape mode: either OS rotated or CSS rotated
+  const isImmersiveLandscape = isMobileLandscape || isRotated;
+
+  // Hardware Gravity Sensor (devicemotion) & Gyroscope (deviceorientation) listener
+  // Works on 100% of Android devices even when Android system "Auto-Rotate" is locked in Portrait!
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    let timer;
-    const handleOrientation = (e) => {
-      // If OS already rotated the viewport into landscape, don't do CSS rotation
-      if (window.innerWidth > window.innerHeight) {
-        setIsAutoDeviceRotated(false);
-        return;
-      }
-      if (!isLandscapePhoto) {
-        setIsAutoDeviceRotated(false);
-        return;
-      }
+    let debounceTimer = null;
 
+    const setDebouncedOrientation = (newOrientation, angle) => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        setDevicePhysicalOrientation(newOrientation);
+        if (angle !== undefined) {
+          setRotationAngle(angle);
+        }
+      }, 150);
+    };
+
+    // 1. Devicemotion: accelerationIncludingGravity (Gravity vector in m/s^2, immune to Euler gimbal lock)
+    const handleMotion = (e) => {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc || acc.x === null || acc.y === null) return;
+
+      const x = acc.x;
+      const y = acc.y;
+      const z = acc.z || 0;
+
+      // Phone is lying flat on a table (screen facing ceiling or floor) -> keep current state
+      if (Math.abs(z) > 8.5 && Math.abs(x) < 3.0 && Math.abs(y) < 3.0) return;
+
+      const absX = Math.abs(x);
+      const absY = Math.abs(y);
+
+      // Sideways tilt detection: gravity acts primarily along the phone's X axis
+      if (absX > 3.8 && absX > absY + 0.8) {
+        if (x > 0) {
+          setDebouncedOrientation('landscape-right', 90);
+        } else {
+          setDebouncedOrientation('landscape-left', -90);
+        }
+      } else if (y > 3.0 && y > absX + 0.8) {
+        // Upright portrait: gravity pulls downwards along the phone's Y axis
+        setDebouncedOrientation('portrait');
+      }
+    };
+
+    // 2. Deviceorientation fallback
+    const handleOrientation = (e) => {
       const gamma = e.gamma;
       const beta = e.beta;
       if (gamma === null || beta === null) return;
 
-      // Phone turned sideways: |gamma| > 55 deg and |beta| < 65 deg
-      const isSidewaysRight = gamma > 55 && Math.abs(beta) < 65;
-      const isSidewaysLeft = gamma < -55 && Math.abs(beta) < 65;
-      // Phone held upright: |gamma| < 30 deg and beta > 25 deg
-      const isUpright = Math.abs(gamma) < 30 && beta > 25;
-
-      if (isSidewaysRight) {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          setRotationAngle(90);
-          setIsAutoDeviceRotated(true);
-        }, 200);
-      } else if (isSidewaysLeft) {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          setRotationAngle(-90);
-          setIsAutoDeviceRotated(true);
-        }, 200);
-      } else if (isUpright) {
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          setIsAutoDeviceRotated(false);
-        }, 200);
+      if (gamma > 35 && Math.abs(beta) < 75) {
+        setDebouncedOrientation('landscape-right', 90);
+      } else if (gamma < -35 && Math.abs(beta) < 75) {
+        setDebouncedOrientation('landscape-left', -90);
+      } else if (Math.abs(gamma) < 22 && beta > 15) {
+        setDebouncedOrientation('portrait');
       }
     };
 
     try {
-      window.addEventListener('deviceorientation', handleOrientation, true);
+      window.addEventListener('devicemotion', handleMotion, { passive: true });
+    } catch {}
+
+    try {
+      window.addEventListener('deviceorientation', handleOrientation, { passive: true });
     } catch {}
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(debounceTimer);
       try {
-        window.removeEventListener('deviceorientation', handleOrientation, true);
+        window.removeEventListener('devicemotion', handleMotion);
+      } catch {}
+      try {
+        window.removeEventListener('deviceorientation', handleOrientation);
       } catch {}
     };
-  }, [isLandscapePhoto]);
+  }, []);
 
-  // Auto-hide controls in mobile landscape or rotated fullscreen for immersive view
+  // Auto-hide controls in immersive fullscreen landscape view
   useEffect(() => {
-    if (!isMobileLandscape && !isRotated) return;
+    if (!isImmersiveLandscape) return;
     const timer = setTimeout(() => {
       setShowControls(false);
     }, 3500);
     return () => clearTimeout(timer);
-  }, [isMobileLandscape, isRotated, currentIndex]);
+  }, [isImmersiveLandscape, currentIndex]);
 
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
@@ -208,8 +292,15 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
     const diffY = clientY - touchStartY;
 
     if (isRotated) {
-      // Physical horizontal swipe translates to vertical motion on rotated screen
+      // Physical horizontal swipe translates across the rotated screen axis
       const physicalDiffX = rotationAngle === 90 ? (touchStartY - clientY) : (clientY - touchStartY);
+      const physicalDiffY = rotationAngle === 90 ? (clientX - touchStartX) : (touchStartX - clientX);
+
+      // Downward swipe to dismiss when rotated
+      if (physicalDiffY > 80 && Math.abs(physicalDiffX) < 70) {
+        onClose();
+        return;
+      }
       if (Math.abs(physicalDiffX) > 45) {
         if (physicalDiffX > 0) handleNext();
         else handlePrev();
@@ -297,59 +388,10 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ── ROTATED FULLSCREEN OVERLAY (Phone held sideways with Portrait Lock) ── */}
-      {isRotated && (
-        <div 
-          onClick={() => setShowControls(prev => !prev)}
-          className="fixed inset-0 z-[10005] bg-[#0c0c0c] flex items-center justify-center overflow-hidden cursor-pointer"
-        >
-          {/* Floating Controls Bar */}
-          <div 
-            className={`absolute top-0 left-0 right-0 z-[10010] pt-[max(12px,env(safe-area-inset-top,12px))] pb-3 px-4 flex items-center justify-between transition-opacity duration-200 ${
-              showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
-            }`}
-          >
-            <div className="text-xs font-mono text-white/70 bg-black/70 px-3 py-1 rounded-full border border-white/10">
-              {currentIndex + 1} / {images.length}
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              className="p-2 rounded-full bg-black/70 text-white hover:text-black hover:bg-white border border-white/20 active:scale-90"
-              aria-label="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Rotated Image Container matching 100dvh x 100dvw */}
-          <div
-            style={{
-              width: viewportDims.height ? `${viewportDims.height}px` : '100dvh',
-              height: viewportDims.width ? `${viewportDims.width}px` : '100dvw',
-              transform: `rotate(${rotationAngle}deg)`,
-              transformOrigin: 'center center',
-            }}
-            className="flex items-center justify-center min-w-0 min-h-0"
-          >
-            <img
-              src={currentImageUrl}
-              alt={image.description || image.name}
-              referrerPolicy="no-referrer"
-              className="max-w-full max-h-full object-contain drop-shadow-2xl select-none"
-              style={{ transform: 'translate3d(0,0,0)' }}
-              draggable={false}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ── TOP HEADER (SHRINK-0 or FLOATING IN MOBILE LANDSCAPE) ── */}
+      {/* ── TOP HEADER (SHRINK-0 OR FLOATING IN IMMERSIVE LANDSCAPE) ── */}
       <header 
         className={`${
-          isMobileLandscape 
+          isImmersiveLandscape 
             ? 'absolute top-0 left-0 right-0 z-50 pt-[max(8px,env(safe-area-inset-top,8px))] pb-2 px-4 sm:px-8 bg-gradient-to-b from-black/85 via-black/40 to-transparent' 
             : 'w-full shrink-0 z-50 pt-[max(12px,env(safe-area-inset-top,12px))] pb-2.5 px-4 sm:px-8 bg-[#0c0c0c] border-b border-white/5'
         } flex items-center justify-between transition-opacity duration-200 ${
@@ -368,11 +410,11 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
         </button>
       </header>
 
-      {/* ── MAIN VIEWPORT CANVAS (FLEX-1 OR FULLSCREEN IN MOBILE LANDSCAPE) ── */}
+      {/* ── MAIN VIEWPORT CANVAS (FLEX-1 OR FULLSCREEN IN IMMERSIVE LANDSCAPE) ── */}
       <main 
         onClick={() => setShowControls(prev => !prev)}
         className={`${
-          isMobileLandscape
+          isImmersiveLandscape
             ? 'absolute inset-0 w-full h-full p-0 z-40 bg-[#0c0c0c]'
             : 'flex-1 min-h-0 min-w-0 w-full p-2 sm:p-4 md:p-6'
         } flex items-center justify-center relative overflow-hidden cursor-pointer`}
@@ -398,7 +440,15 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
           <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
         </button>
 
-        <div className="w-full h-full flex items-center justify-center min-h-0 min-w-0">
+        <div 
+          className="w-full h-full flex items-center justify-center min-h-0 min-w-0 transition-transform duration-300 ease-out"
+          style={isRotated ? {
+            width: viewportDims.height ? `${viewportDims.height}px` : '100dvh',
+            height: viewportDims.width ? `${viewportDims.width}px` : '100dvw',
+            transform: `rotate(${rotationAngle}deg)`,
+            transformOrigin: 'center center',
+          } : undefined}
+        >
           {image.type === 'embed' ? (
             <div 
               onClick={(e) => e.stopPropagation()}
@@ -528,18 +578,18 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
         </div>
       )}
 
-      {/* ── BOTTOM DOCK (SHRINK-0 OR FLOATING IN MOBILE LANDSCAPE) ── */}
+      {/* ── BOTTOM DOCK (SHRINK-0 OR FLOATING IN IMMERSIVE LANDSCAPE) ── */}
       <footer 
         className={`${
-          isMobileLandscape
+          isImmersiveLandscape
             ? 'absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black/85 via-black/40 to-transparent pb-[max(8px,env(safe-area-inset-bottom,8px))] pt-2 px-4 flex flex-col items-center'
             : 'w-full shrink-0 z-50 bg-[#121212] border-t border-white/10'
         } transition-all duration-200 ${
           showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
-        {/* MOBILE COMPACT DOCK (< md or Mobile Landscape) - Ergonomic Right-Thumb Clustered */}
-        <div className={`flex ${isMobileLandscape ? 'flex' : 'md:hidden'} items-center justify-end gap-1.5 sm:gap-2 w-full py-2 px-3 sm:px-6 pb-[max(10px,env(safe-area-inset-bottom,10px))]`}>
+        {/* MOBILE COMPACT DOCK (< md or Immersive Landscape) - Ergonomic Right-Thumb Clustered */}
+        <div className={`flex ${isImmersiveLandscape ? 'flex' : 'md:hidden'} items-center justify-end gap-1.5 sm:gap-2 w-full py-2 px-3 sm:px-6 pb-[max(10px,env(safe-area-inset-bottom,10px))]`}>
           {/* Subtle Left Details on wider screens */}
           <div className="mr-auto min-w-0 pr-2 truncate">
             <div className="text-[11px] font-mono text-neutral-400 truncate max-w-[120px] sm:max-w-[200px]">
@@ -623,8 +673,8 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
           </a>
         </div>
 
-        {/* DESKTOP EXPANDED DOCK (>= md and strictly NOT in mobile landscape) */}
-        {!isMobileLandscape && (
+        {/* DESKTOP EXPANDED DOCK (>= md and strictly NOT in immersive landscape) */}
+        {!isImmersiveLandscape && (
           <div className="hidden md:flex flex-col items-center py-3 px-4 w-full">
           <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-2 shrink-0 font-sans max-w-5xl">
             {/* Download Master Button */}

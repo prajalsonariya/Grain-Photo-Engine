@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye, Loader2, Info, RotateCw, RotateCcw } from 'lucide-react';
+import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye, Loader2, Info, RotateCw, RotateCcw, Zap } from 'lucide-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
@@ -497,15 +497,63 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
             <div className="space-y-2 text-xs font-mono text-neutral-300">
               <div className="truncate text-white font-semibold">{image.name}</div>
               {image.description && (
-                <p className="text-xs text-neutral-400 font-sans">{image.description}</p>
+                <p className="text-xs text-neutral-400 font-sans pb-1">{image.description}</p>
               )}
-              <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] text-neutral-400">
-                {dateStr && <div>📅 {dateStr}</div>}
-                {meta.cameraMake && <div>📷 {meta.cameraMake} {meta.cameraModel}</div>}
-                {meta.focalLength && <div>🔭 {meta.focalLength}mm</div>}
-                {meta.aperture && <div>⭕ f/{meta.aperture}</div>}
-                {meta.exposureTime && <div>⏱️ {formatExposure(meta.exposureTime)}</div>}
-                {meta.isoSpeed && <div>⚡ ISO {meta.isoSpeed}</div>}
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                {dateStr && (
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.04] border border-white/5">
+                    <Calendar className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-[9px] uppercase tracking-widest text-neutral-500 font-mono">Date</div>
+                      <div className="text-xs text-neutral-200 font-mono truncate">{dateStr}</div>
+                    </div>
+                  </div>
+                )}
+                {(meta.cameraMake || meta.cameraModel) && (
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.04] border border-white/5">
+                    <CameraIcon className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-[9px] uppercase tracking-widest text-neutral-500 font-mono">Camera</div>
+                      <div className="text-xs text-neutral-200 font-mono truncate">{meta.cameraMake} {meta.cameraModel}</div>
+                    </div>
+                  </div>
+                )}
+                {meta.focalLength && (
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.04] border border-white/5">
+                    <Settings2 className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-[9px] uppercase tracking-widest text-neutral-500 font-mono">Focal</div>
+                      <div className="text-xs text-neutral-200 font-mono">{meta.focalLength}mm</div>
+                    </div>
+                  </div>
+                )}
+                {meta.aperture && (
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.04] border border-white/5">
+                    <Aperture className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-[9px] uppercase tracking-widest text-neutral-500 font-mono">Aperture</div>
+                      <div className="text-xs text-neutral-200 font-mono">f/{meta.aperture}</div>
+                    </div>
+                  </div>
+                )}
+                {meta.exposureTime && (
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.04] border border-white/5">
+                    <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-[9px] uppercase tracking-widest text-neutral-500 font-mono">Shutter</div>
+                      <div className="text-xs text-neutral-200 font-mono">{formatExposure(meta.exposureTime)}</div>
+                    </div>
+                  </div>
+                )}
+                {meta.isoSpeed && (
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-white/[0.04] border border-white/5">
+                    <Zap className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-[9px] uppercase tracking-widest text-neutral-500 font-mono">ISO</div>
+                      <div className="text-xs text-neutral-200 font-mono">ISO {meta.isoSpeed}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -522,31 +570,16 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
           showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
       >
-        {/* MOBILE COMPACT DOCK (< md or Mobile Landscape) */}
-        <div className={`flex ${isMobileLandscape ? 'flex' : 'md:hidden'} items-center justify-around w-full py-1.5 px-3 max-w-lg mx-auto pb-[max(10px,env(safe-area-inset-bottom,10px))]`}>
-          {/* WhatsApp Share */}
-          <a
-            href={whatsappShareHref}
-            target="_blank"
-            rel="noreferrer"
-            onClick={handleCopyAndShareWhatsApp}
-            className="flex flex-col items-center justify-center gap-1 py-1 px-3 text-emerald-400 active:scale-90 transition-transform"
-          >
-            <WhatsAppIcon className="w-5 h-5" />
-            <span className="text-[10px] font-mono tracking-wider">{copied ? 'Copied!' : 'Share'}</span>
-          </a>
+        {/* MOBILE COMPACT DOCK (< md or Mobile Landscape) - Ergonomic Right-Thumb Clustered */}
+        <div className={`flex ${isMobileLandscape ? 'flex' : 'md:hidden'} items-center justify-end gap-1.5 sm:gap-2 w-full py-2 px-3 sm:px-6 pb-[max(10px,env(safe-area-inset-bottom,10px))]`}>
+          {/* Subtle Left Details on wider screens */}
+          <div className="mr-auto min-w-0 pr-2 truncate">
+            <div className="text-[11px] font-mono text-neutral-400 truncate max-w-[120px] sm:max-w-[200px]">
+              {image.name}
+            </div>
+          </div>
 
-          {/* Download Button */}
-          <a
-            href={(image.url || '').includes('?') ? `${image.url}&download=true` : `${image.url}?download=true`}
-            download={image.name}
-            className="flex flex-col items-center justify-center gap-1 py-1 px-3 text-white active:scale-90 transition-transform"
-          >
-            <Download className="w-5 h-5" />
-            <span className="text-[10px] font-mono tracking-wider">Save</span>
-          </a>
-
-          {/* Rotate to Landscape Fullscreen Button (in portrait mode for landscape photos) */}
+          {/* Rotate to Fullscreen (if in portrait and photo is landscape) */}
           {!isMobileLandscape && isLandscapePhoto && (
             <button
               onClick={(e) => {
@@ -554,59 +587,88 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
                 setRotationAngle(90);
                 setIsManualRotated(prev => !prev);
               }}
-              className="flex flex-col items-center justify-center gap-1 py-1 px-3 text-amber-300 active:scale-90 transition-transform"
+              className="flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl bg-white/[0.05] border border-white/10 text-neutral-300 hover:text-white active:scale-90 transition-all"
               title="Rotate photo to fill screen"
             >
-              <RotateCw className="w-5 h-5" />
+              <RotateCw className="w-4 h-4" />
               <span className="text-[10px] font-mono tracking-wider">Rotate</span>
             </button>
           )}
 
-          {/* 4K Original Master Toggle */}
-          {image.type !== 'video' && (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleRequestOriginal(); }}
-              className={`flex flex-col items-center justify-center gap-1 py-1 px-3 active:scale-90 transition-transform ${
-                showOriginal && originalLoaded 
-                  ? 'text-emerald-400' 
-                  : isOriginalLoading 
-                    ? 'text-amber-400' 
-                    : 'text-neutral-300'
-              }`}
-            >
-              {isOriginalLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
-              <span className="text-[10px] font-mono tracking-wider">
-                {showOriginal && originalLoaded ? '✓ 4K' : isOriginalLoading ? 'Loading' : '4K+'}
-              </span>
-            </button>
-          )}
-
-          {/* EXIF Info Drawer Toggle */}
+          {/* 5. EXIF Info Drawer Toggle (5th from right) */}
           <button
             onClick={(e) => { e.stopPropagation(); setShowInfoDrawer(prev => !prev); }}
-            className={`flex flex-col items-center justify-center gap-1 py-1 px-3 active:scale-90 transition-transform ${
-              showInfoDrawer ? 'text-white' : 'text-neutral-400'
+            className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl border transition-all active:scale-90 ${
+              showInfoDrawer 
+                ? 'bg-white/20 border-white/40 text-white' 
+                : 'bg-white/[0.05] border-white/10 text-neutral-400 hover:text-white'
             }`}
+            title="Photo Details"
           >
-            <Info className="w-5 h-5" />
+            <Info className="w-4 h-4" />
             <span className="text-[10px] font-mono tracking-wider">Info</span>
           </button>
 
-          {/* RAW Download (if available) */}
+          {/* 4. RAW Download (4th from right, if available) */}
           {image.rawFileId && (
             <a
               href={`/api/image/${username || 'guest'}/${image.rawFileId}?download=true&filename=${encodeURIComponent(image.rawFileName || 'RAW_file')}`}
               download={image.rawFileName || `RAW_${image.name}`}
-              className="flex flex-col items-center justify-center gap-1 py-1 px-3 text-amber-300 active:scale-90 transition-transform"
+              className="flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 hover:bg-amber-500/20 active:scale-90 transition-all"
+              title="Download RAW Master"
             >
-              <Download className="w-5 h-5" />
+              <Download className="w-4 h-4" />
               <span className="text-[10px] font-mono tracking-wider">RAW</span>
             </a>
           )}
+
+          {/* 3. 4K Original Master Toggle (3rd from right) */}
+          {image.type !== 'video' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleRequestOriginal(); }}
+              className={`flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl border active:scale-90 transition-all ${
+                showOriginal && originalLoaded 
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+                  : isOriginalLoading 
+                    ? 'bg-amber-500/10 border-amber-500/25 text-amber-400' 
+                    : 'bg-white/[0.05] border-white/10 text-neutral-300 hover:text-white'
+              }`}
+              title="View 4K Master"
+            >
+              {isOriginalLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+              <span className="text-[10px] font-mono tracking-wider">
+                {showOriginal && originalLoaded ? '✓ 4K' : isOriginalLoading ? '...' : '4K+'}
+              </span>
+            </button>
+          )}
+
+          {/* 2. Download Image (Save) (2nd from right) */}
+          <a
+            href={(image.url || '').includes('?') ? `${image.url}&download=true` : `${image.url}?download=true`}
+            download={image.name}
+            className="flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 active:scale-90 transition-all"
+            title="Download Photo"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-[10px] font-mono tracking-wider">Save</span>
+          </a>
+
+          {/* 1. WhatsApp Share (Rightmost hero item, closest to right thumb) */}
+          <a
+            href={whatsappShareHref}
+            target="_blank"
+            rel="noreferrer"
+            onClick={handleCopyAndShareWhatsApp}
+            className="flex flex-col items-center justify-center gap-1 py-1.5 px-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 active:scale-90 transition-all shadow-sm"
+            title="Share on WhatsApp"
+          >
+            <WhatsAppIcon className="w-4 h-4" />
+            <span className="text-[10px] font-mono tracking-wider font-semibold">{copied ? 'Copied!' : 'Share'}</span>
+          </a>
         </div>
 
         {/* DESKTOP EXPANDED DOCK (>= md and strictly NOT in mobile landscape) */}

@@ -28,6 +28,11 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
   const [currentFolder, setCurrentFolder] = useState(initialFolder);
   const [images, setImages] = useState(initialImages);
   const [subfolders, setSubfolders] = useState(initialSubfolders);
+  const sortedSubfolders = useMemo(() => {
+    return [...subfolders].sort((a, b) => 
+      (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [subfolders]);
   const [breadcrumbs, setBreadcrumbs] = useState([{ id: initialFolder.id, name: initialFolder.name }]);
   const [isLoadingFolder, setIsLoadingFolder] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -483,13 +488,13 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
         </div>
 
         {/* Subfolders Section (if any exist) */}
-        {subfolders.length > 0 && (
+        {sortedSubfolders.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-xs font-mono uppercase tracking-widest text-neutral-500 font-bold">
-              Subfolders ({subfolders.length})
+              Subfolders ({sortedSubfolders.length})
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
-              {subfolders.map(sub => (
+              {sortedSubfolders.map(sub => (
                 <div
                   key={sub.id}
                   onClick={() => navigateToFolder(sub.id, sub.name)}

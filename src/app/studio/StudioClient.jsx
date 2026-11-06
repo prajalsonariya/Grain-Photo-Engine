@@ -107,6 +107,19 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
   const [activeTab, setActiveTab] = useState("albums"); // 'albums' | 'settings'
   const [publicList, setPublicList] = useState(publicAlbums);
   const [privateList, setPrivateList] = useState(privateAlbums);
+
+  const sortedPublicAlbums = useMemo(() => {
+    return [...publicList].sort((a, b) => 
+      (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [publicList]);
+
+  const sortedPrivateAlbums = useMemo(() => {
+    return [...privateList].sort((a, b) => 
+      (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [privateList]);
+
   const [copiedId, setCopiedId] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -342,7 +355,7 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                  {publicList.map(album => (
+                  {sortedPublicAlbums.map(album => (
                     <AlbumCard 
                       key={album.id}
                       album={album}
@@ -384,7 +397,7 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-                  {privateList.map(album => (
+                  {sortedPrivateAlbums.map(album => (
                     <AlbumCard 
                       key={album.id}
                       album={album}

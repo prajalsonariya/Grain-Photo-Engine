@@ -239,6 +239,9 @@ async function fetchFoldersWithThumbnails(drive, username, rootFolderId, limit =
     })
   );
 
+  // Natural ascending sort (A-Z, 1, 2, 3...)
+  folders.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
+
   return { folders, hasMore };
 }
 
@@ -482,9 +485,14 @@ async function fetchFolderImagesInternal(oauthClient, username, folderId) {
     })
   );
 
+  // Natural ascending sort (A-Z, 1, 2, 3...)
+  const sortedSubfolders = processedSubfolders.sort((a, b) => 
+    (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+  );
+
   return {
     images,
-    subfolders: processedSubfolders
+    subfolders: sortedSubfolders
   };
 }
 

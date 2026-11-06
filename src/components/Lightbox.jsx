@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye, Loader2, Info, RotateCw, RotateCcw, Zap } from 'lucide-react';
+import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye, Loader2, Info, Zap } from 'lucide-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
@@ -30,7 +30,6 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
 
   // Viewport and Phone Rotation States
   const [viewportDims, setViewportDims] = useState({ width: 0, height: 0 });
-  const [isManualRotated, setIsManualRotated] = useState(false);
   const [isAutoDeviceRotated, setIsAutoDeviceRotated] = useState(false);
   const [rotationAngle, setRotationAngle] = useState(90);
   const [naturalAspect, setNaturalAspect] = useState(null);
@@ -58,7 +57,6 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
     setShowOriginal(false);
     setOriginalLoaded(false);
     setIsOriginalLoading(false);
-    setIsManualRotated(false);
     setIsAutoDeviceRotated(false);
     setRotationAngle(90);
     setNaturalAspect(null);
@@ -78,7 +76,6 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
       if (e.key === 'ArrowRight') handleNext();
       if (e.key === 'ArrowLeft') handlePrev();
       if (e.key === 'i' || e.key === 'I') setShowInfoDrawer(prev => !prev);
-      if (e.key === 'r' || e.key === 'R') setIsManualRotated(prev => !prev);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -119,8 +116,8 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
 
   // Mobile landscape: viewport width > height and short height (typical phone in landscape: 360-480px)
   const isMobileLandscape = viewportDims.width > viewportDims.height && viewportDims.height > 0 && viewportDims.height <= 550;
-  // If OS rotated to landscape, cancel manual/device CSS rotation
-  const isRotated = !isMobileLandscape && (isManualRotated || isAutoDeviceRotated);
+  // If OS rotated to landscape, cancel CSS rotation; otherwise rotate automatically when phone is tilted sideways
+  const isRotated = !isMobileLandscape && isAutoDeviceRotated;
 
   // Accelerometer / Gyroscope auto-rotation detection (when Portrait Lock is on)
   useEffect(() => {
@@ -315,29 +312,16 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
             <div className="text-xs font-mono text-white/70 bg-black/70 px-3 py-1 rounded-full border border-white/10">
               {currentIndex + 1} / {images.length}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsManualRotated(false);
-                  setIsAutoDeviceRotated(false);
-                }}
-                className="bg-black/70 hover:bg-black text-amber-300 border border-amber-400/30 px-3 py-1.5 rounded-full text-xs font-mono flex items-center gap-1.5 active:scale-95 shadow-lg"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Exit Rotate</span>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClose();
-                }}
-                className="p-2 rounded-full bg-black/70 text-white hover:text-black hover:bg-white border border-white/20 active:scale-90"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
+              className="p-2 rounded-full bg-black/70 text-white hover:text-black hover:bg-white border border-white/20 active:scale-90"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Rotated Image Container matching 100dvh x 100dvw */}
@@ -413,22 +397,6 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
         >
           <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8" />
         </button>
-
-        {/* Quick Floating Rotate to Fullscreen Pill on Mobile Portrait for Landscape Photos */}
-        {!isMobileLandscape && isLandscapePhoto && !isRotated && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setRotationAngle(90);
-              setIsManualRotated(true);
-            }}
-            className="absolute bottom-3 right-3 z-40 bg-black/75 hover:bg-black text-white/90 hover:text-white border border-white/20 px-3 py-1.5 rounded-full text-[11px] font-mono flex items-center gap-1.5 shadow-xl active:scale-95 md:hidden"
-            title="Rotate photo to fill screen"
-          >
-            <RotateCw className="w-3.5 h-3.5 text-amber-400" />
-            <span>Rotate Fullscreen</span>
-          </button>
-        )}
 
         <div className="w-full h-full flex items-center justify-center min-h-0 min-w-0">
           {image.type === 'embed' ? (
@@ -578,22 +546,6 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
               {image.name}
             </div>
           </div>
-
-          {/* Rotate to Fullscreen (if in portrait and photo is landscape) */}
-          {!isMobileLandscape && isLandscapePhoto && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setRotationAngle(90);
-                setIsManualRotated(prev => !prev);
-              }}
-              className="flex flex-col items-center justify-center gap-1 py-1.5 px-2.5 rounded-xl bg-white/[0.05] border border-white/10 text-neutral-300 hover:text-white active:scale-90 transition-all"
-              title="Rotate photo to fill screen"
-            >
-              <RotateCw className="w-4 h-4" />
-              <span className="text-[10px] font-mono tracking-wider">Rotate</span>
-            </button>
-          )}
 
           {/* 5. EXIF Info Drawer Toggle (5th from right) */}
           <button

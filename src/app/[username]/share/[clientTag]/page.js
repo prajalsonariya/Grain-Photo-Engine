@@ -1,19 +1,23 @@
 import Header from '@/components/Header';
-import { getFolderImages, getFolderDetails, getConfig, getOAuthClient } from '@/lib/drive';
+import { getFolderImages, getFolderDetails, getValidOAuthClientForUser } from '@/lib/drive';
 import GalleryClient from '@/app/[username]/gallery/[id]/GalleryClient';
 import { notFound } from 'next/navigation';
-import prisma from '@/lib/prisma';
+import { getCachedUserByUsername } from '@/lib/userCache';
+import { cache } from 'react';
 
 export const revalidate = 60; // Cache page but revalidate every 60s for performance
 
-async function getUserAndClient(username) {
-  const user = await prisma.user.findUnique({
-    where: { username },
-    include: { accounts: { where: { provider: 'google' } } }
-  });
-  if (!user || !user.accounts[0]?.access_token) return null;
-  return { user, oauthClient: getOAuthClient(user.accounts[0].access_token, user.accounts[0].refresh_token) };
-}
+const getUserAndClient = cache(async (username) => {
+  try {
+    const user = await getCachedUserByUsername(username);
+    if (!user || !user.accounts[0]?.access_token) return null;
+    const oauthClient = await getValidOAuthClientForUser(user.id);
+    return { user, oauthClient };
+  } catch (err) {
+    console.error(`[getUserAndClient error for ${username}]:`, err?.message || err);
+    return null;
+  }
+});
 
 export async function generateMetadata({ params }) {
   const { username, clientTag } = await params;
@@ -41,10 +45,21 @@ export default async function SharePage({ params }) {
   const plan = user.plan || 'freelancer';
   if (plan === 'portfolio') notFound();
 
-  const [{ images, subfolders }, folder] = await Promise.all([
-    getFolderImages(oauthClient, username, clientTag),
-    getFolderDetails(oauthClient, clientTag),
-  ]);
+  let images = [];
+  let subfolders = [];
+  let folder = null;
+
+  try {
+    const [res, folderRes] = await Promise.all([
+      getFolderImages(oauthClient, username, clientTag),
+      getFolderDetails(oauthClient, clientTag),
+    ]);
+    images = res.images || [];
+    subfolders = res.subfolders || [];
+    folder = folderRes;
+  } catch (err) {
+    console.error(`[Share error for ${username}/${clientTag}]:`, err?.message || err);
+  }
 
   if (!folder) {
     notFound();
@@ -63,9 +78,11 @@ export default async function SharePage({ params }) {
           </h1>
         </div>
         <GalleryClient
+          initialFolder={folder}
           initialImages={images}
           initialSubfolders={subfolders}
-          basePath="/share"
+          basePath={`/${username}/share`}
+          username={username}
           whatsapp={user.whatsapp}
         />
       </div>

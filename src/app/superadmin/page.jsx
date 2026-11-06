@@ -40,7 +40,7 @@ export default async function SuperAdminPage() {
   return (
     <main className="min-h-screen bg-[#1e1e1e] text-neutral-200 font-sans selection:bg-white/20 selection:text-white pb-24">
       {/* Basic header placeholder so it looks consistent */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/80 backdrop-blur-md border-b border-white/5 transition-all duration-300">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/95 border-b border-white/5 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-center">
           <span className="text-sm tracking-[0.3em] font-light uppercase text-white">
             Super Admin Control Panel

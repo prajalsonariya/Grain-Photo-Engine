@@ -43,11 +43,12 @@ model User {
   image         String?
   
   // Custom Fields for Grain Photo Engine SaaS
-  username        String?   @unique
-  plan            String    @default("freelancer")
-  publicFolderId  String?
-  privateFolderId String?
-  apiToken        String?   @unique
+  username            String?   @unique
+  plan                String    @default("freelancer")
+  rootFolderId        String?
+  publicFolderId      String?
+  privateFolderId     String?
+  onboardingCompleted Boolean   @default(false)
   
   // Profile / Branding Configuration
   heroTitle       String?   @default("Albums")

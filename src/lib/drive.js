@@ -1,5 +1,7 @@
 import { google } from 'googleapis';
 import { cache } from 'react';
+import prisma from './prisma.js';
+import { getCachedUserByUsername } from './userCache.js';
 
 export function getOAuthClient(accessToken, refreshToken) {
   const oauth2Client = new google.auth.OAuth2(
@@ -13,9 +15,142 @@ export function getOAuthClient(accessToken, refreshToken) {
   return oauth2Client;
 }
 
+const oauthClientCache = new Map();
+
+export async function getValidOAuthClientForUser(userId) {
+  const now = Date.now();
+  const cached = oauthClientCache.get(userId);
+  if (cached && cached.expiryDate > now + 5 * 60 * 1000) {
+    return cached.client;
+  }
+
+  const account = await prisma.account.findFirst({
+    where: { userId, provider: 'google' }
+  });
+
+  if (!account || !account.access_token) {
+    throw new Error('No Google account linked');
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET
+  );
+
+  const expiryDate = account.expires_at ? account.expires_at * 1000 : now + 3600 * 1000;
+
+  oauth2Client.setCredentials({
+    access_token: account.access_token,
+    refresh_token: account.refresh_token,
+    expiry_date: expiryDate
+  });
+
+  // Attach auto-persistence on refresh
+  oauth2Client.on('tokens', async (tokens) => {
+    try {
+      const newExpiry = tokens.expiry_date || (tokens.expires_in ? now + tokens.expires_in * 1000 : now + 3600 * 1000);
+      oauthClientCache.set(userId, {
+        client: oauth2Client,
+        expiryDate: newExpiry
+      });
+      await prisma.account.updateMany({
+        where: { id: account.id },
+        data: {
+          access_token: tokens.access_token,
+          ...(tokens.refresh_token ? { refresh_token: tokens.refresh_token } : {}),
+          ...(tokens.expiry_date ? { expires_at: Math.floor(tokens.expiry_date / 1000) } : {}),
+        }
+      });
+    } catch (err) {
+      console.error('[Drive Token Vault] Failed to persist refreshed token:', err);
+    }
+  });
+
+  // Proactively refresh if expired or expiring within 5 minutes
+  const isExpiring = !account.expires_at || (account.expires_at * 1000 < now + 5 * 60 * 1000);
+  if (isExpiring && account.refresh_token) {
+    try {
+      const refreshed = await oauth2Client.refreshAccessToken();
+      const newTokens = refreshed.credentials;
+      const newExpiry = newTokens.expiry_date || now + 3600 * 1000;
+      oauthClientCache.set(userId, {
+        client: oauth2Client,
+        expiryDate: newExpiry
+      });
+      await prisma.account.updateMany({
+        where: { id: account.id },
+        data: {
+          access_token: newTokens.access_token,
+          ...(newTokens.refresh_token ? { refresh_token: newTokens.refresh_token } : {}),
+          ...(newTokens.expiry_date ? { expires_at: Math.floor(newTokens.expiry_date / 1000) } : {}),
+        }
+      });
+    } catch (err) {
+      console.warn('[Drive Token Vault] Proactive token refresh notice:', err?.message);
+    }
+  } else {
+    oauthClientCache.set(userId, {
+      client: oauth2Client,
+      expiryDate
+    });
+  }
+
+  return oauth2Client;
+}
+
+export async function getValidOAuthClientForUsername(username) {
+  const user = await getCachedUserByUsername(username);
+  if (!user) throw new Error(`User not found: ${username}`);
+  return getValidOAuthClientForUser(user.id);
+}
+
 function cdnProxy(baseCdnUrl, size) {
-  const cdnUrl = `${baseCdnUrl}=${size}`;
-  return `/api/thumbnail?url=${encodeURIComponent(cdnUrl)}`;
+  if (!baseCdnUrl) return null;
+  return `${baseCdnUrl}=${size}`;
+}
+
+// In-memory SWR response cache for Drive metadata queries (Fresh 60s, Stale up to 10m)
+const driveCache = new Map();
+const FRESH_TTL_MS = 60_000;
+const STALE_TTL_MS = 10 * 60_000;
+
+function getCached(key) {
+  const item = driveCache.get(key);
+  if (!item) return null;
+  const now = Date.now();
+  if (now > item.staleExpiry) {
+    driveCache.delete(key);
+    return null;
+  }
+  return {
+    data: item.data,
+    isStale: now > item.freshExpiry
+  };
+}
+
+function setCached(key, data) {
+  if (driveCache.size > 500) {
+    const oldestKey = driveCache.keys().next().value;
+    driveCache.delete(oldestKey);
+  }
+  const now = Date.now();
+  driveCache.set(key, {
+    data,
+    freshExpiry: now + FRESH_TTL_MS,
+    staleExpiry: now + STALE_TTL_MS
+  });
+}
+
+export function invalidateDriveCache(folderId = null) {
+  if (!folderId) {
+    driveCache.clear();
+    return;
+  }
+  for (const key of driveCache.keys()) {
+    if (key.includes(folderId)) {
+      driveCache.delete(key);
+    }
+  }
 }
 
 function extractId(str) {
@@ -39,116 +174,93 @@ async function fetchFoldersWithThumbnails(drive, username, rootFolderId, limit =
   const foldersRes = await drive.files.list(options);
 
   const rawFiles = foldersRes.data.files || [];
-  console.log(`[DEBUG] fetchFoldersWithThumbnails for rootFolderId: ${rootFolderId}`);
-  console.log(`[DEBUG] Google Drive returned ${rawFiles.length} folders.`);
-  if (rawFiles.length === 0) {
-    // If 0, let's just do a generic search in this folder to see if ANY files exist
-    const anyFilesRes = await drive.files.list({
-      q: `'${rootFolderId}' in parents and trashed = false`,
-      fields: 'files(id, name, mimeType)'
-    });
-    console.log(`[DEBUG] Generic search in ${rootFolderId} returned ${anyFilesRes.data.files?.length || 0} items. MimeTypes:`, anyFilesRes.data.files?.map(f => f.mimeType));
-  }
-  
   const hasMore = limit ? rawFiles.length > limit : false;
   const filesToProcess = limit ? rawFiles.slice(0, limit) : rawFiles;
 
-  const folders = [];
+  // Resolve covers in parallel with subfolder recursion fallback
+  const folders = await Promise.all(
+    filesToProcess.map(async (folder) => {
+      let targetImage = null;
 
-  for (const folder of filesToProcess) {
-    let targetImage = null;
-
-    // First, search specifically for a file named "cover"
-    const coverRes = await drive.files.list({
-      q: `'${folder.id}' in parents and name contains 'cover' and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
-      fields: 'files(id, name, thumbnailLink)',
-      pageSize: 1,
-    });
-    
-    if (coverRes.data.files && coverRes.data.files.length > 0) {
-      targetImage = coverRes.data.files[0];
-    }
-
-    // If no cover found, use the first image
-    if (!targetImage) {
-      const imagesRes = await drive.files.list({
-        q: `'${folder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
-        fields: 'files(id, name, thumbnailLink)',
-        orderBy: 'name',
-        pageSize: 1, 
-      });
-      if (imagesRes.data.files && imagesRes.data.files.length > 0) {
-        targetImage = imagesRes.data.files[0];
-      }
-    }
-
-    // If still nothing, check subfolders
-    if (!targetImage) {
-      const subRes = await drive.files.list({
-        q: `'${folder.id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
-        fields: 'files(id)',
-        pageSize: 1,
-      });
-      if (subRes.data.files && subRes.data.files.length > 0) {
-        // Check subfolder for cover image first
-        const subCoverRes = await drive.files.list({
-          q: `'${subRes.data.files[0].id}' in parents and name contains 'cover' and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
-          fields: 'files(id, name, thumbnailLink)',
-          pageSize: 1,
+      try {
+        const res = await drive.files.list({
+          q: `'${folder.id}' in parents and trashed = false`,
+          fields: 'files(id, name, mimeType, thumbnailLink, appProperties)',
+          pageSize: 10,
         });
-        if (subCoverRes.data.files && subCoverRes.data.files.length > 0) {
-          targetImage = subCoverRes.data.files[0];
-        } else {
-          const subImagesRes = await drive.files.list({
-            q: `'${subRes.data.files[0].id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
-            fields: 'files(id, name, thumbnailLink)',
-            orderBy: 'name',
-            pageSize: 1,
-          });
-          if (subImagesRes.data.files && subImagesRes.data.files.length > 0) {
-            targetImage = subImagesRes.data.files[0];
+        const files = res.data.files || [];
+
+        const mediaFiles = files.filter(f =>
+          (f.mimeType && (f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))) ||
+          /\.(jpg|jpeg|png|webp|mov|mp4|raf|cr2|cr3|nef|arw|dng)$/i.test(f.name)
+        );
+
+        targetImage = mediaFiles.find(f => f.appProperties?.isGrainCover === 'true')
+          || mediaFiles.find(f => f.name.toLowerCase().includes('cover'))
+          || mediaFiles[0];
+
+        // If no direct image in folder root, inspect first subfolder for its cover
+        if (!targetImage) {
+          const subfolder = files.find(f => f.mimeType === 'application/vnd.google-apps.folder');
+          if (subfolder) {
+            const subRes = await drive.files.list({
+              q: `'${subfolder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
+              fields: 'files(id, name, mimeType, thumbnailLink, appProperties)',
+              pageSize: 4,
+            });
+            const subMedia = subRes.data.files || [];
+            targetImage = subMedia.find(f => f.appProperties?.isGrainCover === 'true')
+              || subMedia.find(f => f.name.toLowerCase().includes('cover'))
+              || subMedia[0];
           }
         }
+      } catch (err) {
+        console.warn(`[Cover lookup error for ${folder.id}]:`, err?.message);
       }
-    }
-    
-    let thumbnailUrl = null;
-    let baseCdnUrl = null;
-    let fallbackUrl = null;
 
-    if (targetImage) {
-      fallbackUrl = `/api/image/${username}/${targetImage.id}`;
-      baseCdnUrl = targetImage.thumbnailLink ? targetImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
-      thumbnailUrl = baseCdnUrl ? cdnProxy(baseCdnUrl, 's200-rw') : fallbackUrl;
-    }
+      let thumbnailUrl = null;
+      let baseCdnUrl = null;
+      let fallbackUrl = null;
 
-    folders.push({
-      id: folder.id,
-      name: folder.name,
-      createdTime: folder.createdTime,
-      thumbnailUrl,
-      baseCdnUrl,
-      fallbackUrl
-    });
-  }
+      if (targetImage) {
+        fallbackUrl = `/api/image/${username}/${targetImage.id}`;
+        baseCdnUrl = targetImage.thumbnailLink ? targetImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
+        thumbnailUrl = baseCdnUrl ? cdnProxy(baseCdnUrl, 's400-rw') : fallbackUrl;
+      }
+
+      return {
+        id: folder.id,
+        name: folder.name,
+        createdTime: folder.createdTime,
+        thumbnailUrl,
+        baseCdnUrl,
+        fallbackUrl
+      };
+    })
+  );
 
   return { folders, hasMore };
 }
 
-export const getFolders = cache(async (oauthClient, username, rootFolderId) => {
+async function fetchFoldersInternal(oauthClient, username, rootFolderId) {
   const drive = google.drive({ version: 'v3', auth: oauthClient });
   
-  // Check if root folder has direct images
-  const rootImagesRes = await drive.files.list({
-    q: `'${rootFolderId}' in parents and mimeType contains 'image/' and trashed = false`,
-    fields: 'files(id, name, thumbnailLink)',
-    orderBy: 'createdTime desc',
-    pageSize: 20, // get a few to check for 'cover'
-  });
+  const [rootImagesRes, subfoldersRes] = await Promise.all([
+    drive.files.list({
+      q: `'${rootFolderId}' in parents and mimeType contains 'image/' and trashed = false`,
+      fields: 'files(id, name, thumbnailLink)',
+      orderBy: 'createdTime desc',
+      pageSize: 20,
+    }).catch(err => {
+      console.warn('[Root images error]:', err?.message);
+      return { data: { files: [] } };
+    }),
+    fetchFoldersWithThumbnails(drive, username, rootFolderId),
+  ]);
 
   const folders = [];
 
-  if (rootImagesRes.data.files && rootImagesRes.data.files.length > 0) {
+  if (rootImagesRes?.data?.files && rootImagesRes.data.files.length > 0) {
     const coverImage = rootImagesRes.data.files.find(f => f.name.toLowerCase().includes('cover')) || rootImagesRes.data.files[0];
     let fallbackUrl = `/api/image/${username}/${coverImage.id}`;
     let baseCdnUrl = coverImage.thumbnailLink ? coverImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
@@ -156,17 +268,46 @@ export const getFolders = cache(async (oauthClient, username, rootFolderId) => {
     folders.push({
       id: rootFolderId,
       name: 'Main Collection',
-      thumbnailUrl: baseCdnUrl ? cdnProxy(baseCdnUrl, 's200-rw') : fallbackUrl,
+      thumbnailUrl: baseCdnUrl ? cdnProxy(baseCdnUrl, 's400-rw') : fallbackUrl,
       baseCdnUrl,
       fallbackUrl
     });
   }
 
-  const { folders: subfolders } = await fetchFoldersWithThumbnails(drive, username, rootFolderId);
+  const subfolders = subfoldersRes?.folders || [];
   return [...folders, ...subfolders].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export const getFolders = cache(async (oauthClient, username, rootFolderId) => {
+  const cacheKey = `folders:${username}:${rootFolderId}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    if (cached.isStale) {
+      fetchFoldersInternal(oauthClient, username, rootFolderId).then(fresh => {
+        setCached(cacheKey, fresh);
+      }).catch(() => {});
+    }
+    return cached.data;
+  }
+
+  const result = await fetchFoldersInternal(oauthClient, username, rootFolderId);
+  setCached(cacheKey, result);
+  return result;
 });
 
 export const getPrivateFolders = cache(async (oauthClient, username, rootFolderId, limit = null) => {
+  const cacheKey = `privateFolders:${username}:${rootFolderId}:${limit}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    if (cached.isStale) {
+      const drive = google.drive({ version: 'v3', auth: oauthClient });
+      fetchFoldersWithThumbnails(drive, username, rootFolderId, limit).then(fresh => {
+        setCached(cacheKey, fresh);
+      }).catch(() => {});
+    }
+    return cached.data;
+  }
+
   const drive = google.drive({ version: 'v3', auth: oauthClient });
 
   if (!rootFolderId || rootFolderId === 'your_private_folder_id_here') {
@@ -174,14 +315,16 @@ export const getPrivateFolders = cache(async (oauthClient, username, rootFolderI
   }
 
   try {
-    return await fetchFoldersWithThumbnails(drive, username, rootFolderId, limit);
+    const result = await fetchFoldersWithThumbnails(drive, username, rootFolderId, limit);
+    setCached(cacheKey, result);
+    return result;
   } catch (err) {
     console.error('Error fetching private folders:', err);
     return { folders: [], hasMore: false };
   }
 });
 
-export const getFolderImages = cache(async (oauthClient, username, folderId) => {
+async function fetchFolderImagesInternal(oauthClient, username, folderId) {
   const drive = google.drive({ version: 'v3', auth: oauthClient });
   
   const filesRes = await drive.files.list({
@@ -251,8 +394,7 @@ export const getFolderImages = cache(async (oauthClient, username, folderId) => 
         }
       }
 
-      // If no thumbnail exists and it's a video, don't fall back to the raw file for the grid thumbnail
-      // because an <img> tag cannot display an .mp4 file.
+      // High performance direct CDN thumbnail
       let cdnUrl = null;
       if (baseCdnUrl) {
         cdnUrl = cdnProxy(baseCdnUrl, 's400-rw');
@@ -280,55 +422,87 @@ export const getFolderImages = cache(async (oauthClient, username, folderId) => 
     }
   }
 
-  const processedSubfolders = [];
-  for (const folder of rawSubfolders) {
-    let targetImage = null;
+  // Parallel subfolder cover resolution with nested fallback
+  const processedSubfolders = await Promise.all(
+    rawSubfolders.map(async (folder) => {
+      let targetImage = null;
 
-    // Search for cover image first
-    const coverRes = await drive.files.list({
-      q: `'${folder.id}' in parents and name contains 'cover' and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
-      fields: 'files(id, name, thumbnailLink)',
-      pageSize: 1,
-    });
-    if (coverRes.data.files && coverRes.data.files.length > 0) {
-      targetImage = coverRes.data.files[0];
-    }
+      try {
+        const res = await drive.files.list({
+          q: `'${folder.id}' in parents and trashed = false`,
+          fields: 'files(id, name, mimeType, thumbnailLink, appProperties)',
+          pageSize: 10,
+        });
+        const files = res.data.files || [];
 
-    // Fall back to first image
-    if (!targetImage) {
-      const imagesRes = await drive.files.list({
-        q: `'${folder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
-        fields: 'files(id, name, thumbnailLink)',
-        orderBy: 'name',
-        pageSize: 1, 
-      });
-      if (imagesRes.data.files && imagesRes.data.files.length > 0) {
-        targetImage = imagesRes.data.files[0];
+        const mediaFiles = files.filter(f =>
+          (f.mimeType && (f.mimeType.startsWith('image/') || f.mimeType.startsWith('video/'))) ||
+          /\.(jpg|jpeg|png|webp|mov|mp4|raf|cr2|cr3|nef|arw|dng)$/i.test(f.name)
+        );
+
+        targetImage = mediaFiles.find(f => f.appProperties?.isGrainCover === 'true')
+          || mediaFiles.find(f => f.name.toLowerCase().includes('cover'))
+          || mediaFiles[0];
+
+        if (!targetImage) {
+          const subfolder = files.find(f => f.mimeType === 'application/vnd.google-apps.folder');
+          if (subfolder) {
+            const subRes = await drive.files.list({
+              q: `'${subfolder.id}' in parents and (mimeType contains 'image/' or mimeType contains 'video/') and trashed = false`,
+              fields: 'files(id, name, mimeType, thumbnailLink, appProperties)',
+              pageSize: 4,
+            });
+            const subMedia = subRes.data.files || [];
+            targetImage = subMedia.find(f => f.appProperties?.isGrainCover === 'true')
+              || subMedia.find(f => f.name.toLowerCase().includes('cover'))
+              || subMedia[0];
+          }
+        }
+      } catch (err) {
+        console.warn(`[Subfolder cover lookup error for ${folder.id}]:`, err?.message);
       }
-    }
-    
-    let thumbnailUrl = null;
-    let baseCdnUrl = null;
-    let fallbackUrl = null;
-    if (targetImage) {
-      fallbackUrl = `/api/image/${targetImage.id}`;
-      baseCdnUrl = targetImage.thumbnailLink ? targetImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
-      thumbnailUrl = baseCdnUrl ? cdnProxy(baseCdnUrl, 's200-rw') : fallbackUrl;
-    }
 
-    processedSubfolders.push({
-      id: folder.id,
-      name: folder.name,
-      thumbnailUrl,
-      baseCdnUrl,
-      fallbackUrl
-    });
-  }
+      let thumbnailUrl = null;
+      let baseCdnUrl = null;
+      let fallbackUrl = null;
+
+      if (targetImage) {
+        fallbackUrl = `/api/image/${username}/${targetImage.id}`;
+        baseCdnUrl = targetImage.thumbnailLink ? targetImage.thumbnailLink.replace(/=[^=]*$/, '') : null;
+        thumbnailUrl = baseCdnUrl ? cdnProxy(baseCdnUrl, 's400-rw') : fallbackUrl;
+      }
+
+      return {
+        id: folder.id,
+        name: folder.name,
+        thumbnailUrl,
+        baseCdnUrl,
+        fallbackUrl
+      };
+    })
+  );
 
   return {
     images,
     subfolders: processedSubfolders
   };
+}
+
+export const getFolderImages = cache(async (oauthClient, username, folderId) => {
+  const cacheKey = `folderImages:${username}:${folderId}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    if (cached.isStale) {
+      fetchFolderImagesInternal(oauthClient, username, folderId).then(fresh => {
+        setCached(cacheKey, fresh);
+      }).catch(() => {});
+    }
+    return cached.data;
+  }
+
+  const result = await fetchFolderImagesInternal(oauthClient, username, folderId);
+  setCached(cacheKey, result);
+  return result;
 });
 
 export const getImageStream = cache(async (oauthClient, fileId, rangeHeader = null) => {
@@ -352,12 +526,17 @@ export const getImageStream = cache(async (oauthClient, fileId, rangeHeader = nu
 });
 
 export const getFolderDetails = cache(async (oauthClient, folderId) => {
+  const cacheKey = `folderDetails:${folderId}`;
+  const cached = getCached(cacheKey);
+  if (cached) return cached.data;
+
   const drive = google.drive({ version: 'v3', auth: oauthClient });
   try {
     const res = await drive.files.get({
       fileId: folderId,
       fields: 'id, name, parents'
     });
+    setCached(cacheKey, res.data, 5 * 60_000);
     return res.data;
   } catch (err) {
     console.error('Error fetching folder details:', err);

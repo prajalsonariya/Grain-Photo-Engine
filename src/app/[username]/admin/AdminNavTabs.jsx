@@ -12,14 +12,14 @@ export default function AdminNavTabs({ username, isSuperAdmin }) {
   return (
     <nav className="flex space-x-8 mt-10 border-b border-white/10">
       <Link 
-        href={`/${username}/admin`}
+        href="/studio"
         className={`pb-3 text-sm uppercase tracking-wider font-semibold transition-colors border-b-2 ${
           isGallery 
             ? "text-white border-white" 
             : "text-neutral-500 hover:text-white border-transparent"
         }`}
       >
-        Gallery
+        Studio
       </Link>
       <Link 
         href={`/${username}/admin/profile`}

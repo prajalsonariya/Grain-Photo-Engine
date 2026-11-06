@@ -24,7 +24,7 @@ export default function SelectionBar({ selectedCount, onDownload, onClear, onSel
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3 sm:py-4 bg-neutral-900/95 backdrop-blur-xl border border-white/10 rounded-full shadow-2xl shadow-black/50"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 sm:gap-4 px-5 sm:px-6 py-3 sm:py-4 bg-neutral-900 border border-white/15 rounded-full shadow-2xl shadow-black/80"
         >
           <span className="text-white text-xs sm:text-sm font-medium tracking-wide whitespace-nowrap">
             <span className="text-white font-semibold">{selectedCount}</span>

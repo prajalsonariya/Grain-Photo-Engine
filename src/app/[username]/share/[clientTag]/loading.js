@@ -2,7 +2,7 @@ export default function ShareLoading() {
   return (
     <main className="min-h-screen bg-[#1e1e1e] text-neutral-200 font-sans">
       {/* Mock Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/80 backdrop-blur-md border-b border-white/5 h-20 flex items-center justify-center">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/95 border-b border-white/5 h-20 flex items-center justify-center">
         <div className="w-24 h-4 bg-white/10 rounded animate-pulse"></div>
       </header>
 

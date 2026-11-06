@@ -1,8 +1,7 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye, Loader2 } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
 
@@ -17,23 +16,30 @@ function WhatsAppIcon({ className }) {
 
 export default function Lightbox({ images, currentIndex, onClose, onIndexChange, whatsapp }) {
   const { username } = useParams() || {};
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(typeof window !== 'undefined');
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [originalLoaded, setOriginalLoaded] = useState(false);
+  const [isOriginalLoading, setIsOriginalLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleNext = useCallback(() => {
+  // Reset states on index change
+  useEffect(() => {
     setShowOriginal(false);
+    setOriginalLoaded(false);
+    setIsOriginalLoading(false);
+  }, [currentIndex]);
+
+  const handleNext = useCallback(() => {
     onIndexChange((currentIndex + 1) % images.length);
   }, [currentIndex, images.length, onIndexChange]);
 
   const handlePrev = useCallback(() => {
-    setShowOriginal(false);
     onIndexChange((currentIndex - 1 + images.length) % images.length);
   }, [currentIndex, images.length, onIndexChange]);
 
@@ -54,6 +60,25 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
     };
   }, []);
 
+  // Preload adjacent neighbor images (N-1, N+1, N+2) in HD tier
+  useEffect(() => {
+    if (!images || images.length <= 1) return;
+    const indicesToPreload = [
+      (currentIndex + 1) % images.length,
+      (currentIndex - 1 + images.length) % images.length,
+      (currentIndex + 2) % images.length
+    ];
+
+    indicesToPreload.forEach(idx => {
+      const neighbor = images[idx];
+      if (neighbor?.baseCdnUrl) {
+        const img = new Image();
+        img.referrerPolicy = 'no-referrer';
+        img.src = `${neighbor.baseCdnUrl}=s1440-rw`;
+      }
+    });
+  }, [currentIndex, images]);
+
   const handleTouchStart = (e) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
@@ -73,37 +98,41 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
     if (isRightSwipe) handlePrev();
   };
 
-  // Share to WhatsApp — copies formatted message + page URL to clipboard
-  const handleShareToWhatsApp = useCallback(async () => {
-    const baseUrl = window.location.origin + window.location.pathname;
-    const currentImage = images[currentIndex];
-    const shareUrl = currentImage ? `${baseUrl}?img=${currentImage.id}` : window.location.href;
-    const message = `📸 Check out this gallery!\n${shareUrl}`;
-    try {
-      await navigator.clipboard.writeText(message);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for browsers that block clipboard API
-      const ta = document.createElement('textarea');
-      ta.value = message;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }, [images, currentIndex]);
-
   const image = images[currentIndex];
   if (!image) return null;
 
-  const previewUrl = image.baseCdnUrl ? `/api/thumbnail?url=${encodeURIComponent(`${image.baseCdnUrl}=s2000-rw`)}` : image.url;
-  const currentImageUrl = showOriginal ? image.url : previewUrl;
+  // Single stable full-size image URL: Retina HD 1440p (or Original Master if requested)
+  const hdUrl = image.tempUrl || (image.baseCdnUrl ? `${image.baseCdnUrl}=s1440-rw` : image.url);
+  const originalMasterUrl = image.url;
+  const currentImageUrl = showOriginal ? originalMasterUrl : hdUrl;
+
+  const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  
+  // Build a universally accessible client share URL for the photo
+  let shareablePath = currentPath;
+  if (currentPath.includes('/studio/folder/')) {
+    const studioFolderId = currentPath.split('/studio/folder/')[1]?.split('?')[0];
+    if (username && studioFolderId) {
+      shareablePath = `/${username}/share/${studioFolderId}`;
+    }
+  }
+
+  const photoShareUrl = `${currentOrigin}${shareablePath}?img=${image.id}`;
+  const whatsappShareHref = `https://api.whatsapp.com/send?text=${encodeURIComponent(`📸 Check out this photo!\n${photoShareUrl}`)}`;
+
+  const handleCopyAndShareWhatsApp = () => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(`📸 Check out this photo!\n${photoShareUrl}`).catch(() => {});
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleRequestOriginal = () => {
+    setIsOriginalLoading(true);
+    setShowOriginal(true);
+  };
 
   const meta = image.imageMediaMetadata || {};
   const dateStr = meta.time ? new Date(meta.time).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '';
@@ -115,153 +144,160 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
   };
 
   const content = (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className="fixed inset-0 pt-20 z-[40] bg-neutral-950/95 backdrop-blur-xl flex flex-col overflow-hidden"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-
-        <button
-          onClick={handlePrev}
-          className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 z-50 text-white/30 hover:text-white transition-all duration-150 p-4 hidden sm:block"
-        >
-          <ChevronLeft className="w-8 h-8" />
-        </button>
-
-        <button
-          onClick={handleNext}
-          className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 z-50 text-white/30 hover:text-white transition-all duration-150 p-4 hidden sm:block"
-        >
-          <ChevronRight className="w-8 h-8" />
-        </button>
-
-        <div className="flex-1 w-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-12 h-full max-h-[100dvh]">
-          <motion.div
-            key={image.id}
-            initial={{ scale: 0.98, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="relative w-full flex-1 flex items-center justify-center min-h-0 mb-6 mt-12 sm:mt-0 group"
-          >
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[60] bg-black/60 hover:bg-black/90 text-white p-2 sm:p-3 rounded-full backdrop-blur-md transition-all opacity-100 sm:opacity-0 group-hover:opacity-100 shadow-xl"
-            >
-              <X className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
-            {image.type === 'embed' ? (
-              <div className="w-full h-full max-w-5xl max-h-[80vh] aspect-video drop-shadow-2xl bg-black">
-                <iframe
-                  src={image.embedUrl}
-                  className="w-full h-full"
-                  allow="autoplay; fullscreen; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-            ) : image.type === 'video' ? (
-              <video
-                src={image.url}
-                controls
-                autoPlay
-                className="max-w-full max-h-full object-contain drop-shadow-2xl"
-              />
-            ) : (
-              <img
-                key={currentImageUrl}
-                src={currentImageUrl}
-                alt={image.description || image.name}
-                className="max-w-full max-h-full object-contain drop-shadow-2xl select-none"
-                style={{ transform: 'translate3d(0,0,0)' }}
-                draggable={false}
-              />
-            )}
-          </motion.div>
-
-          {/* Action row */}
-          <motion.div
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.15, ease: "easeOut" }}
-            className="flex flex-col sm:flex-row items-center gap-3 mb-6 shrink-0 w-full sm:w-auto px-4 z-10"
-          >
-            {/* Download */}
-            <a
-              href={`${image.url}&download=true`}
-              download={image.name}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-white/90 hover:bg-white text-black text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-colors rounded-sm sm:min-w-[180px]"
-            >
-              <Download className="w-4 h-4" />
-              {image.type === 'video' ? 'Download Video' : 'Download Image'}
-            </a>
-
-            {/* Share to WhatsApp — copies message + page URL to clipboard */}
-            <button
-              onClick={handleShareToWhatsApp}
-              title="Copy gallery link to share on WhatsApp"
-              className={`flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-all rounded-sm sm:min-w-[180px] ${
-                copied
-                  ? 'border-green-500/60 bg-green-500/10 text-green-400'
-                  : 'border-green-500/30 text-green-400/80 hover:text-green-400 hover:bg-green-500/10 hover:border-green-500/50'
-              }`}
-            >
-              <WhatsAppIcon className="w-4 h-4 flex-shrink-0" />
-              {copied ? 'Link Copied!' : 'Share via WhatsApp'}
-            </button>
-
-            {/* View Original */}
-            {!showOriginal && image.type !== 'video' && (
-              <button
-                onClick={() => setShowOriginal(true)}
-                className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/20 text-white/90 hover:text-white hover:bg-white/10 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium transition-colors rounded-sm sm:min-w-[180px]"
-              >
-                <Eye className="w-4 h-4" />
-                View Original
-              </button>
-            )}
-
-            {/* Download RAW */}
-            {image.rawFileId && (
-              <a
-                href={`/api/image/${username || 'guest'}/${image.rawFileId}?download=true&filename=${encodeURIComponent(image.rawFileName || 'RAW_file')}`}
-                download={image.rawFileName || `RAW_${image.name}`}
-                className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/10 text-white/70 hover:text-white text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium hover:bg-white/5 transition-colors rounded-sm sm:min-w-[180px]"
-              >
-                <Download className="w-3 h-3" />
-                Download RAW
-              </a>
-            )}
-          </motion.div>
-
-          {/* EXIF metadata strip */}
-          <motion.div
-            initial={{ y: 10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.15, duration: 0.15, ease: "easeOut" }}
-            className="w-full shrink-0 border-t border-white/5 pt-4 pb-2 px-4 flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-neutral-500 z-10"
-          >
-            {image.description && (
-              <div className="w-full text-center text-neutral-400 mb-1 tracking-[0.1em] font-light">
-                {image.description}
-              </div>
-            )}
-
-            {dateStr && <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 opacity-50" /> {dateStr}</span>}
-            {meta.cameraMake && <span className="flex items-center gap-1.5"><CameraIcon className="w-3 h-3 opacity-50" /> {meta.cameraMake} {meta.cameraModel}</span>}
-            {meta.focalLength && <span className="flex items-center gap-1.5"><Settings2 className="w-3 h-3 opacity-50" /> {meta.focalLength}mm</span>}
-            {meta.aperture && <span className="flex items-center gap-1.5"><Aperture className="w-3 h-3 opacity-50" /> f/{meta.aperture}</span>}
-            {meta.exposureTime && <span className="flex items-center gap-1.5"><Clock className="w-3 h-3 opacity-50" /> {formatExposure(meta.exposureTime)}</span>}
-            {meta.isoSpeed && <span className="flex items-center gap-1.5">ISO {meta.isoSpeed}</span>}
-          </motion.div>
-
+    <div
+      className="fixed inset-0 z-[9999] bg-[#0c0c0c] flex flex-col justify-between overflow-hidden"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Fixed Top Bar */}
+      <div className="fixed top-0 left-0 right-0 z-[10001] h-16 px-4 sm:px-8 flex items-center justify-between pointer-events-none">
+        <div className="text-xs font-mono text-white/60 pointer-events-auto">
+          {currentIndex + 1} / {images.length}
         </div>
-      </motion.div>
-    </AnimatePresence>
+        <button
+          onClick={onClose}
+          aria-label="Close full screen"
+          className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all pointer-events-auto cursor-pointer shadow-lg active:scale-95"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <button
+        onClick={handlePrev}
+        className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 z-50 text-white/40 hover:text-white transition-all p-4 hidden sm:block active:scale-95 cursor-pointer"
+      >
+        <ChevronLeft className="w-8 h-8" />
+      </button>
+
+      <button
+        onClick={handleNext}
+        className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 z-50 text-white/40 hover:text-white transition-all p-4 hidden sm:block active:scale-95 cursor-pointer"
+      >
+        <ChevronRight className="w-8 h-8" />
+      </button>
+
+      {/* Main Image Frame - Stable, Zero-Flicker (keeps DOM node mounted, no re-mount tearing) */}
+      <div className="flex-1 w-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-12 h-full max-h-[100dvh] pt-16">
+        <div className="relative w-full flex-1 flex items-center justify-center min-h-0 mb-4 group">
+          {image.type === 'embed' ? (
+            <div className="w-full h-full max-w-5xl max-h-[80vh] aspect-video drop-shadow-2xl bg-black">
+              <iframe
+                src={image.embedUrl}
+                className="w-full h-full"
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          ) : image.type === 'video' ? (
+            <video
+              src={image.url}
+              controls
+              autoPlay
+              className="max-w-full max-h-full object-contain drop-shadow-2xl"
+            />
+          ) : (
+            <img
+              src={currentImageUrl}
+              alt={image.description || image.name}
+              referrerPolicy="no-referrer"
+              onLoad={() => {
+                if (showOriginal) {
+                  setOriginalLoaded(true);
+                  setIsOriginalLoading(false);
+                }
+              }}
+              className="max-w-full max-h-full object-contain drop-shadow-2xl select-none"
+              style={{ transform: 'translate3d(0,0,0)' }}
+              draggable={false}
+            />
+          )}
+        </div>
+
+        {/* Action Controls Bar */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 mb-6 shrink-0 w-full sm:w-auto px-4 z-10 font-sans">
+          {/* Download Master Button */}
+          <a
+            href={(image.url || '').includes('?') ? `${image.url}&download=true` : `${image.url}?download=true`}
+            download={image.name}
+            className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-white hover:bg-neutral-200 text-black text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-colors rounded-sm sm:min-w-[180px] active:scale-95 cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            {image.type === 'video' ? 'Download Video' : 'Download Photo'}
+          </a>
+
+          {/* Share to WhatsApp Native Link (Unblockable by Safari/Chrome pop-up guard) */}
+          <a
+            href={whatsappShareHref}
+            target="_blank"
+            rel="noreferrer"
+            onClick={handleCopyAndShareWhatsApp}
+            title="Share direct photo link via WhatsApp"
+            className={`flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-all rounded-sm sm:min-w-[180px] active:scale-95 cursor-pointer ${
+              copied
+                ? 'border-emerald-500/60 bg-emerald-500/20 text-emerald-300'
+                : 'border-emerald-500/30 text-emerald-400 hover:text-white hover:bg-emerald-500/20 hover:border-emerald-500/50'
+            }`}
+          >
+            <WhatsAppIcon className="w-4 h-4 flex-shrink-0" />
+            {copied ? 'Link Copied!' : 'Share WhatsApp'}
+          </a>
+
+          {/* View Original Master Toggle */}
+          {!showOriginal && image.type !== 'video' && (
+            <button
+              onClick={handleRequestOriginal}
+              className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/20 text-white/90 hover:text-white hover:bg-white/10 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium transition-colors rounded-sm sm:min-w-[180px] active:scale-95 cursor-pointer"
+            >
+              <Eye className="w-4 h-4" />
+              View Original (4K+)
+            </button>
+          )}
+
+          {showOriginal && isOriginalLoading && (
+            <div className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/20 text-white/80 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium rounded-sm sm:min-w-[180px]">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+              Buffering Master...
+            </div>
+          )}
+
+          {showOriginal && originalLoaded && (
+            <div className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-mono rounded-sm sm:min-w-[180px]">
+              ✓ Original Master
+            </div>
+          )}
+
+          {/* Download RAW file if attached */}
+          {image.rawFileId && (
+            <a
+              href={`/api/image/${username || 'guest'}/${image.rawFileId}?download=true&filename=${encodeURIComponent(image.rawFileName || 'RAW_file')}`}
+              download={image.rawFileName || `RAW_${image.name}`}
+              className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/10 text-white/70 hover:text-white text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium hover:bg-white/5 transition-colors rounded-sm sm:min-w-[180px]"
+            >
+              <Download className="w-3 h-3" />
+              Download RAW
+            </a>
+          )}
+        </div>
+
+        {/* Camera EXIF Metadata Strip */}
+        <div className="w-full shrink-0 border-t border-white/10 pt-4 pb-2 px-4 flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-neutral-400 z-10 font-mono">
+          {image.description && (
+            <div className="w-full text-center text-neutral-300 mb-1 tracking-[0.1em] font-sans font-light">
+              {image.description}
+            </div>
+          )}
+
+          {dateStr && <span className="flex items-center gap-1.5"><Calendar className="w-3 h-3 opacity-60" /> {dateStr}</span>}
+          {meta.cameraMake && <span className="flex items-center gap-1.5"><CameraIcon className="w-3 h-3 opacity-60" /> {meta.cameraMake} {meta.cameraModel}</span>}
+          {meta.focalLength && <span className="flex items-center gap-1.5"><Settings2 className="w-3 h-3 opacity-60" /> {meta.focalLength}mm</span>}
+          {meta.aperture && <span className="flex items-center gap-1.5"><Aperture className="w-3 h-3 opacity-60" /> f/{meta.aperture}</span>}
+          {meta.exposureTime && <span className="flex items-center gap-1.5"><Clock className="w-3 h-3 opacity-60" /> {formatExposure(meta.exposureTime)}</span>}
+          {meta.isoSpeed && <span className="flex items-center gap-1.5">ISO {meta.isoSpeed}</span>}
+        </div>
+      </div>
+    </div>
   );
 
   if (!mounted) return null;

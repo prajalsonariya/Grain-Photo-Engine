@@ -1,6 +1,5 @@
 import { Readable } from 'stream';
-import { getImageStream, getOAuthClient } from '@/lib/drive';
-import prisma from '@/lib/prisma';
+import { getImageStream, getValidOAuthClientForUsername } from '@/lib/drive';
 
 export async function GET(request, { params }) {
   try {
@@ -10,16 +9,13 @@ export async function GET(request, { params }) {
     const mimeType = searchParams.get('mimeType') || 'image/jpeg';
     const filename = searchParams.get('filename') || 'download';
 
-    const user = await prisma.user.findUnique({
-      where: { username },
-      include: { accounts: { where: { provider: 'google' } } }
-    });
-
-    if (!user || !user.accounts[0]?.access_token) {
-      return new Response('Unauthorized', { status: 401 });
+    let oauthClient;
+    try {
+      oauthClient = await getValidOAuthClientForUsername(username);
+    } catch {
+      return new Response('Unauthorized or user not found', { status: 401 });
     }
 
-    const oauthClient = getOAuthClient(user.accounts[0].access_token, user.accounts[0].refresh_token);
     const rangeHeader = request.headers.get('range');
     const { stream, headers: upstreamHeaders, status } = await getImageStream(oauthClient, id, rangeHeader);
     
@@ -42,7 +38,7 @@ export async function GET(request, { params }) {
     // Convert the Node.js stream into a Web ReadableStream for Next.js
     const webStream = stream instanceof ReadableStream ? stream : Readable.toWeb(stream);
 
-    return new Response(webStream, { status, headers });
+    return new Response(webStream, { status: status || 200, headers });
   } catch (error) {
     console.error('Error proxying image:', error);
     return new Response('Image not found or error fetching', { status: 404 });

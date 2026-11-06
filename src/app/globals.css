@@ -1,15 +1,22 @@
 @import "tailwindcss";
 
 @theme {
-  --color-neutral-950: #1e1e1e;
-  --color-neutral-900: #1e1e1e;
-  --color-black: #1e1e1e;
-  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, sans-serif;
+  --color-neutral-950: #0e0e0e;
+  --color-neutral-900: #141414;
+  --color-surface: #111111;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-surface-container-low: #161616;
+  --color-surface-container: #1c1c1c;
+  --color-surface-container-high: #262626;
+  --color-surface-container-highest: #333333;
+  --color-on-surface: #e5e5e5;
+  --color-on-surface-variant: #8c8c8c;
+  --font-sans: var(--font-montserrat), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 :root {
-  --background: #1e1e1e;
-  --foreground: #ededed;
+  --background: #111111;
+  --foreground: #e5e5e5;
 }
 
 body {
@@ -20,20 +27,61 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbar for Lightbox Info Panel */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+@layer utilities {
+  .studio-panel {
+    background-color: var(--color-surface-container);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .studio-card {
+    background-color: var(--color-surface-container-low);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.5rem;
+    position: relative;
+  }
+  .pb-safe {
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 16px));
+  }
+  .pt-safe {
+    padding-top: max(12px, env(safe-area-inset-top, 12px));
+  }
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  .touch-pressable {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .touch-pressable:active {
+    transform: scale(0.98);
+  }
 }
 
+/* Custom scrollbars */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  -webkit-overflow-scrolling: touch;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

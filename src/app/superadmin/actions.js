@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { invalidateUserCache } from "@/lib/userCache";
 
 export async function updateUserPlan(userId, newPlan) {
   const session = await getServerSession(authOptions);
@@ -23,6 +24,8 @@ export async function updateUserPlan(userId, newPlan) {
     where: { id: userId },
     data: { plan: newPlan }
   });
+
+  invalidateUserCache(userId);
 
   return { success: true };
 }

@@ -138,7 +138,7 @@ export default function ProfileClient({ initialData, username }) {
 
       <section className={!isAgency ? "opacity-50 pointer-events-none relative" : ""}>
         {!isAgency && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm rounded-sm border border-white/5">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60 rounded-sm border border-white/5">
             <span className="text-white font-bold tracking-widest uppercase text-sm mb-2">Agency Plan Required</span>
             <span className="text-neutral-400 text-xs text-center px-8">Upgrade to the Agency plan to display social media links in your header.</span>
           </div>

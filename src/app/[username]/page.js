@@ -1,7 +1,7 @@
 import Header from '@/components/Header';
 import HomeClient from './HomeClient';
-import { getFolders, getConfig, getOAuthClient } from '@/lib/drive';
-import prisma from '@/lib/prisma';
+import { getFolders, getValidOAuthClientForUser } from '@/lib/drive';
+import { getCachedUserByUsername } from '@/lib/userCache';
 import { notFound } from 'next/navigation';
 
 export const revalidate = 60; // Cache page but revalidate every 60s for performance
@@ -9,17 +9,25 @@ export const revalidate = 60; // Cache page but revalidate every 60s for perform
 export default async function Home({ params }) {
   const { username } = await params;
 
-  const user = await prisma.user.findUnique({
-    where: { username },
-    include: { accounts: { where: { provider: 'google' } } }
-  });
+  let user = null;
+  try {
+    user = await getCachedUserByUsername(username);
+  } catch (err) {
+    console.error(`[DB error fetching user ${username}]:`, err?.message || err);
+    notFound();
+  }
 
   if (!user || !user.publicFolderId || !user.accounts[0]?.access_token) {
     notFound();
   }
 
-  const oauthClient = getOAuthClient(user.accounts[0].access_token, user.accounts[0].refresh_token);
-  const folders = await getFolders(oauthClient, username, user.publicFolderId);
+  let folders = [];
+  try {
+    const oauthClient = await getValidOAuthClientForUser(user.id);
+    folders = await getFolders(oauthClient, username, user.publicFolderId);
+  } catch (error) {
+    console.error(`[Drive error for ${username}]:`, error?.message || error);
+  }
 
   const isAgency = user.plan === 'agency';
 

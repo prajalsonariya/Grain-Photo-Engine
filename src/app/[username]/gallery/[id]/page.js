@@ -1,21 +1,25 @@
 import Header from '@/components/Header';
-import { getFolderImages, getFolderDetails, getConfig, getOAuthClient } from '@/lib/drive';
+import { getFolderImages, getFolderDetails, getValidOAuthClientForUser } from '@/lib/drive';
 import GalleryClient from './GalleryClient';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { notFound } from 'next/navigation';
-import prisma from '@/lib/prisma';
+import { getCachedUserByUsername } from '@/lib/userCache';
+import { cache } from 'react';
 
 export const revalidate = 60;
 
-async function getUserAndClient(username) {
-  const user = await prisma.user.findUnique({
-    where: { username },
-    include: { accounts: { where: { provider: 'google' } } }
-  });
-  if (!user || !user.accounts[0]?.access_token) return null;
-  return { user, oauthClient: getOAuthClient(user.accounts[0].access_token, user.accounts[0].refresh_token) };
-}
+const getUserAndClient = cache(async (username) => {
+  try {
+    const user = await getCachedUserByUsername(username);
+    if (!user || !user.accounts[0]?.access_token) return null;
+    const oauthClient = await getValidOAuthClientForUser(user.id);
+    return { user, oauthClient };
+  } catch (err) {
+    console.error(`[getUserAndClient error for ${username}]:`, err?.message || err);
+    return null;
+  }
+});
 
 export async function generateMetadata({ params }) {
   const { username, id } = await params;
@@ -38,10 +42,21 @@ export default async function GalleryPage({ params }) {
   const plan = user.plan || 'freelancer';
   if (plan === 'portfolio') notFound();
 
-  const [{ images, subfolders }, folder] = await Promise.all([
-    getFolderImages(oauthClient, username, id),
-    getFolderDetails(oauthClient, id),
-  ]);
+  let images = [];
+  let subfolders = [];
+  let folder = null;
+
+  try {
+    const [res, folderRes] = await Promise.all([
+      getFolderImages(oauthClient, username, id),
+      getFolderDetails(oauthClient, id),
+    ]);
+    images = res.images || [];
+    subfolders = res.subfolders || [];
+    folder = folderRes;
+  } catch (err) {
+    console.error(`[Gallery error for ${username}/${id}]:`, err?.message || err);
+  }
 
   if (!folder) {
     notFound();
@@ -61,8 +76,11 @@ export default async function GalleryPage({ params }) {
           </h1>
         </div>
         <GalleryClient
+          initialFolder={folder}
           initialImages={images}
           initialSubfolders={subfolders}
+          basePath={`/${username}/gallery`}
+          username={username}
           whatsapp={user.whatsapp}
         />
       </div>

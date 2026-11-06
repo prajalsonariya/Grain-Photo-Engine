@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { getConfig } from '@/lib/drive';
 
 // Inline WhatsApp SVG — avoids any client-side icon library dependency
 function WhatsAppIcon({ className }) {
@@ -65,7 +64,7 @@ function PortfolioIcon({ className }) {
 export default async function Header({ config = null, isAgency = false, homeUrl = '/' }) {
   if (!config) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/80 backdrop-blur-md border-b border-white/5 transition-all duration-300">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/95 border-b border-white/5 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-center">
           <Link href={homeUrl} className="text-sm tracking-[0.3em] font-light uppercase text-white hover:text-neutral-300 transition-colors">
             Loading...
@@ -104,7 +103,7 @@ export default async function Header({ config = null, isAgency = false, homeUrl 
   } : {};
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/80 backdrop-blur-md border-b border-white/5 transition-all duration-300">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/95 border-b border-white/5 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between relative">
 
         {/* ── Left spacer ── */}
@@ -119,6 +118,7 @@ export default async function Header({ config = null, isAgency = false, homeUrl 
             <img 
               src={config.logoUrl} 
               alt={displayName} 
+              referrerPolicy="no-referrer"
               className="h-8 sm:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
@@ -200,7 +200,7 @@ export default async function Header({ config = null, isAgency = false, homeUrl 
               rel="noopener noreferrer"
               id="header-contact-cta"
               className="flex items-center gap-2 px-4 py-2 rounded-full
-                         bg-white/8 backdrop-blur-md border border-white/15
+                         bg-white/10 border border-white/20
                          text-white hover:bg-white/15 hover:border-white/30
                          transition-all duration-200 shadow-lg
                          text-[10px] uppercase tracking-[0.15em] font-medium

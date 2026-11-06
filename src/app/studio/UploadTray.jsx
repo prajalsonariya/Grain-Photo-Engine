@@ -22,7 +22,7 @@ export default function UploadTray({ uploads = [], onClearDone }) {
   return (
     <aside
       aria-label="Upload Progress"
-      className="fixed bottom-6 right-6 z-50 w-80 sm:w-96 studio-card bg-[#161616] border border-white/15 rounded-xl shadow-2xl overflow-hidden font-sans text-xs"
+      className="fixed bottom-0 sm:bottom-6 left-0 right-0 sm:left-auto sm:right-6 z-50 w-full sm:w-96 studio-card bg-[#161616] border-t sm:border border-white/15 rounded-t-xl sm:rounded-xl shadow-2xl overflow-hidden font-sans text-xs pb-[max(0px,env(safe-area-inset-bottom,0px))]"
     >
       {/* Header bar */}
       <div 

@@ -64,9 +64,9 @@ function PortfolioIcon({ className }) {
 export default async function Header({ config = null, isAgency = false, homeUrl = '/' }) {
   if (!config) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/95 border-b border-white/5 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-center">
-          <Link href={homeUrl} className="text-sm tracking-[0.3em] font-light uppercase text-white hover:text-neutral-300 transition-colors">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#141414] border-b border-white/10 pt-[env(safe-area-inset-top,0px)] transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-20 flex items-center justify-center">
+          <Link href={homeUrl} className="text-xs sm:text-sm tracking-[0.25em] sm:tracking-[0.3em] font-light uppercase text-white hover:text-neutral-300 transition-colors">
             Loading...
           </Link>
         </div>
@@ -103,16 +103,34 @@ export default async function Header({ config = null, isAgency = false, homeUrl 
   } : {};
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#1e1e1e]/95 border-b border-white/5 transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between relative">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#141414] border-b border-white/10 pt-[env(safe-area-inset-top,0px)] transition-all duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-20 flex items-center justify-between relative">
 
-        {/* ── Left spacer ── */}
-        <div className="flex-1" />
+        {/* ── Left spacer / brand icon ── */}
+        <div className="flex-1 flex items-center">
+          <Link
+            href={homeUrl}
+            className="flex items-center group sm:hidden"
+          >
+            {isAgency && config.logoUrl ? (
+              <img 
+                src={config.logoUrl} 
+                alt={displayName} 
+                referrerPolicy="no-referrer"
+                className="h-7 w-auto object-contain"
+              />
+            ) : (
+              <span className="text-xs tracking-[0.2em] font-bold uppercase text-white truncate max-w-[170px]">
+                {displayName}
+              </span>
+            )}
+          </Link>
+        </div>
 
-        {/* ── Center logo ── */}
+        {/* ── Center logo (desktop) ── */}
         <Link
           href={homeUrl}
-          className="flex items-center justify-center group absolute left-1/2 -translate-x-1/2"
+          className="hidden sm:flex items-center justify-center group absolute left-1/2 -translate-x-1/2"
         >
           {isAgency && config.logoUrl ? (
             <img 
@@ -129,7 +147,7 @@ export default async function Header({ config = null, isAgency = false, homeUrl 
         </Link>
 
         {/* ── Right: social icons + WhatsApp action dock ── */}
-        <div className="flex-1 flex items-center justify-end gap-3 sm:gap-4">
+        <div className="flex-1 flex items-center justify-end gap-2 sm:gap-4">
 
           {/* Social icons — agency plan only */}
           {socials.instagram && (
@@ -192,19 +210,19 @@ export default async function Header({ config = null, isAgency = false, homeUrl 
             </a>
           )}
 
-          {/* Contact glassmorphic action dock */}
+          {/* Contact action dock */}
           {contactUrl && (
             <a
               href={contactUrl}
               target="_blank"
               rel="noopener noreferrer"
               id="header-contact-cta"
-              className="flex items-center gap-2 px-4 py-2 rounded-full
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full
                          bg-white/10 border border-white/20
                          text-white hover:bg-white/15 hover:border-white/30
                          transition-all duration-200 shadow-lg
                          text-[10px] uppercase tracking-[0.15em] font-medium
-                         group"
+                         group active:scale-95"
             >
               {contactType === 'whatsapp' ? (
                 <WhatsAppIcon className="w-3.5 h-3.5 text-green-400 flex-shrink-0 group-hover:scale-110 transition-transform duration-200" />

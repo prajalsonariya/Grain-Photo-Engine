@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
   Folder, Plus, ExternalLink, Share2, Copy, CheckCheck, 
-  Trash2, MessageCircle, Settings, HardDrive, RefreshCw, LogOut, Check 
+  Trash2, MessageCircle, Settings, HardDrive, RefreshCw, LogOut, Check, Pencil 
 } from "lucide-react";
 import StorageIndicator from "./StorageIndicator";
 import { signOut, signIn } from "next-auth/react";
@@ -27,10 +27,10 @@ function AlbumCard({ album, basePath, onCopy, isCopied, onDelete, onRename }) {
     <div 
       onMouseEnter={() => prefetchFolder(album.id, "studio")}
       onTouchStart={() => prefetchFolder(album.id, "studio")}
-      className="studio-card p-4 bg-[#161616] border border-white/10 hover:border-white/20 rounded-xl transition-all flex flex-col justify-between group shadow-sm"
+      className="studio-card p-3 sm:p-4 bg-[#161616] border border-white/10 hover:border-white/20 rounded-xl transition-all flex flex-col justify-between group shadow-sm active:scale-[0.99]"
     >
       <Link href={`/studio/folder/${album.id}`} className="block">
-        <div className="aspect-[16/10] bg-[#0e0e0e] rounded-lg overflow-hidden relative mb-3 border border-white/5">
+        <div className="aspect-[16/10] bg-[#0e0e0e] rounded-lg overflow-hidden relative mb-2.5 sm:mb-3 border border-white/5">
           {album.thumbnailUrl ? (
             <img 
               src={album.thumbnailUrl}
@@ -40,7 +40,7 @@ function AlbumCard({ album, basePath, onCopy, isCopied, onDelete, onRename }) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-neutral-600">
-              <Folder className="w-8 h-8 opacity-40" />
+              <Folder className="w-7 h-7 sm:w-8 sm:h-8 opacity-40" />
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
@@ -58,25 +58,32 @@ function AlbumCard({ album, basePath, onCopy, isCopied, onDelete, onRename }) {
             />
           </form>
         ) : (
-          <h4 
-            onDoubleClick={(e) => { e.preventDefault(); setIsEditing(true); }}
-            className="text-xs font-bold text-white uppercase tracking-wider truncate mb-1"
-            title="Double click to rename"
-          >
-            {album.name}
-          </h4>
+          <div className="flex items-center justify-between gap-1 mb-1">
+            <h4 
+              className="text-xs font-bold text-white uppercase tracking-wider truncate flex-1"
+            >
+              {album.name}
+            </h4>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsEditing(true); }}
+              className="p-1 text-neutral-500 hover:text-white"
+              title="Rename album"
+            >
+              <Pencil className="w-3 h-3" />
+            </button>
+          </div>
         )}
       </Link>
 
       <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px] font-mono text-neutral-400">
         <span className="text-[10px] text-neutral-500">
-          {album.createdTime ? new Date(album.createdTime).toLocaleDateString() : ""}
+          {album.createdTime ? new Date(album.createdTime).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }) : ""}
         </span>
 
         <div className="flex items-center gap-1">
           <button
             onClick={() => onCopy(album.id, basePath)}
-            className="p-1.5 hover:bg-white/10 rounded text-neutral-400 hover:text-white transition-colors"
+            className="p-2 sm:p-1.5 hover:bg-white/10 rounded text-neutral-400 hover:text-white transition-colors active:scale-90"
             title="Copy share link"
           >
             {isCopied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -84,7 +91,7 @@ function AlbumCard({ album, basePath, onCopy, isCopied, onDelete, onRename }) {
 
           <button
             onClick={() => onDelete(album.id)}
-            className="p-1.5 hover:bg-red-500/20 text-neutral-400 hover:text-red-400 rounded transition-colors"
+            className="p-2 sm:p-1.5 hover:bg-red-500/20 text-neutral-400 hover:text-red-400 rounded transition-colors active:scale-90"
             title="Move to Trash"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -241,25 +248,25 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
   return (
     <div className="min-h-screen bg-[#111111] text-[#e5e5e5] font-sans pb-32">
       {/* Studio Header Bar */}
-      <header className="border-b border-white/10 bg-[#141414] sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-base sm:text-lg font-black tracking-tight uppercase text-white">
+      <header className="border-b border-white/10 bg-[#141414] sticky top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 truncate">
+            <h1 className="text-sm sm:text-lg font-black tracking-tight uppercase text-white truncate">
               Grain Studio
             </h1>
-            <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full border border-white/10 bg-white/5 text-[10px] font-mono text-neutral-400">
+            <span className="hidden md:inline-block px-2.5 py-0.5 rounded-full border border-white/10 bg-white/5 text-[10px] font-mono text-neutral-400">
               grainphoto.com/{user.username}
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             <StorageIndicator />
 
             <a
               href={`/${user.username}`}
               target="_blank"
               rel="noreferrer"
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 bg-white text-black font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-neutral-200 transition-colors"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white text-black font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-neutral-200 transition-colors"
             >
               <span>Portfolio</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -268,27 +275,27 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
             <button
               onClick={handleRefreshStudio}
               disabled={isRefreshing}
-              className="p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer active:scale-90"
               title="Refresh Albums & Photos"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-white" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isRefreshing ? "animate-spin text-white" : ""}`} />
             </button>
 
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
-              className="p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-red-400 transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-red-400 transition-colors active:scale-90"
               title="Sign Out"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
 
         {/* Subnavigation Bar */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex gap-6 text-xs font-mono uppercase tracking-widest border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 flex gap-4 sm:gap-6 text-xs font-mono uppercase tracking-widest border-t border-white/5">
           <button
             onClick={() => setActiveTab("albums")}
-            className={`py-3 border-b-2 font-bold transition-colors cursor-pointer ${
+            className={`py-2.5 sm:py-3 border-b-2 font-bold transition-colors cursor-pointer ${
               activeTab === "albums" ? "border-white text-white" : "border-transparent text-neutral-500 hover:text-neutral-300"
             }`}
           >
@@ -296,7 +303,7 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
           </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={`py-3 border-b-2 font-bold transition-colors cursor-pointer ${
+            className={`py-2.5 sm:py-3 border-b-2 font-bold transition-colors cursor-pointer ${
               activeTab === "settings" ? "border-white text-white" : "border-transparent text-neutral-500 hover:text-neutral-300"
             }`}
           >
@@ -305,24 +312,24 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-6 sm:pt-8">
         {activeTab === "albums" ? (
-          <div className="space-y-12">
+          <div className="space-y-8 sm:space-y-12">
             {/* Public Collections Section */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <section className="space-y-3 sm:space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
                 <div>
-                  <h3 className="text-sm font-mono uppercase tracking-widest font-bold text-white">
+                  <h3 className="text-xs sm:text-sm font-mono uppercase tracking-widest font-bold text-white">
                     01. Public Portfolio Collections ({publicList.length})
                   </h3>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-[11px] sm:text-xs text-neutral-400 mt-0.5">
                     Visible to everyone on your public portfolio at grainphoto.com/{user.username}.
                   </p>
                 </div>
 
                 <button
                   onClick={() => { setModalType("public"); setAlbumName(""); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer shadow"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-white text-black font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer shadow active:scale-95 w-full sm:w-auto"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>New Public Album</span>
@@ -330,11 +337,11 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
               </div>
 
               {publicList.length === 0 ? (
-                <div className="py-16 text-center border border-white/5 rounded-xl bg-neutral-900/20 text-neutral-500 text-xs font-mono uppercase tracking-widest">
+                <div className="py-12 sm:py-16 text-center border border-white/5 rounded-xl bg-neutral-900/20 text-neutral-500 text-xs font-mono uppercase tracking-widest">
                   No public albums yet. Click above to create your first portfolio collection.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                   {publicList.map(album => (
                     <AlbumCard 
                       key={album.id}
@@ -351,20 +358,20 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
             </section>
 
             {/* Private Client Delivery Section */}
-            <section className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <section className="space-y-3 sm:space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
                 <div>
-                  <h3 className="text-sm font-mono uppercase tracking-widest font-bold text-white">
+                  <h3 className="text-xs sm:text-sm font-mono uppercase tracking-widest font-bold text-white">
                     02. Private Client Delivery ({privateList.length})
                   </h3>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-[11px] sm:text-xs text-neutral-400 mt-0.5">
                     Direct-to-client private albums with proofing, downloads, and WhatsApp delivery.
                   </p>
                 </div>
 
                 <button
                   onClick={() => { setModalType("private"); setAlbumName(""); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-black font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer shadow"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-white text-black font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-neutral-200 transition-colors cursor-pointer shadow active:scale-95 w-full sm:w-auto"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>New Client Album</span>
@@ -372,11 +379,11 @@ export default function StudioClient({ user, publicAlbums = [], privateAlbums = 
               </div>
 
               {privateList.length === 0 ? (
-                <div className="py-16 text-center border border-white/5 rounded-xl bg-neutral-900/20 text-neutral-500 text-xs font-mono uppercase tracking-widest">
+                <div className="py-12 sm:py-16 text-center border border-white/5 rounded-xl bg-neutral-900/20 text-neutral-500 text-xs font-mono uppercase tracking-widest">
                   No client albums yet. Create a private gallery to deliver photos to clients.
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
                   {privateList.map(album => (
                     <AlbumCard 
                       key={album.id}

@@ -16,7 +16,7 @@ export default function MasonryGallery({ images, onImageClick, selectionMode, se
   };
 
   return (
-    <div className="flex flex-wrap gap-2 sm:gap-4 after:content-[''] after:flex-grow-[10]">
+    <div className="flex flex-wrap gap-1.5 sm:gap-4 after:content-[''] after:flex-grow-[10]">
       {images.map((image, index) => {
         const width = image.imageMediaMetadata?.width || 300;
         const height = image.imageMediaMetadata?.height || 200;
@@ -26,7 +26,7 @@ export default function MasonryGallery({ images, onImageClick, selectionMode, se
         return (
           <div
             key={image.id}
-            className={`cursor-pointer group relative bg-neutral-900 overflow-hidden flex-grow-0 sm:flex-grow-[var(--ar)] w-[calc(100%/3-5.33px)] sm:w-[var(--w)] aspect-square sm:aspect-auto h-auto sm:h-[130px] md:h-[180px] transition-[transform,opacity] duration-200 ease-out active:scale-[0.98] ${
+            className={`cursor-pointer group relative bg-neutral-900 overflow-hidden flex-grow-0 sm:flex-grow-[var(--ar)] w-[calc(100%/3-1px)] sm:w-[var(--w)] aspect-square sm:aspect-auto h-auto sm:h-[130px] md:h-[180px] transition-[transform,opacity] duration-150 ease-out active:scale-[0.98] select-none touch-manipulation ${
               isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-neutral-950' : ''
             }`}
             style={{ 
@@ -34,7 +34,7 @@ export default function MasonryGallery({ images, onImageClick, selectionMode, se
               '--w': `${aspectRatio * 150}px`, 
               maxWidth: '100%',
               contentVisibility: 'auto',
-              containIntrinsicSize: '150px 150px'
+              containIntrinsicSize: '120px 120px'
             }}
             onClick={() => handleClick(index, image)}
           >
@@ -54,20 +54,22 @@ export default function MasonryGallery({ images, onImageClick, selectionMode, se
               />
             )}
 
-            {/* Selection checkbox */}
+            {/* Selection checkbox (generous 44x44px tap hitbox) */}
             {selectionMode && (
-              <div className={`absolute top-2 left-2 z-10 w-6 h-6 rounded-sm border-2 flex items-center justify-center transition-all duration-150 ${
-                isSelected 
-                  ? 'bg-white border-white' 
-                  : 'border-white/50 bg-black/60 group-hover:border-white/80'
-              }`}>
-                {isSelected && <Check className="w-4 h-4 text-black stroke-[3]" />}
+              <div className="absolute top-0 left-0 z-10 w-11 h-11 flex items-center justify-center p-2">
+                <div className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center transition-all duration-150 ${
+                  isSelected 
+                    ? 'bg-white border-white' 
+                    : 'border-white/60 bg-black/70'
+                }`}>
+                  {isSelected && <Check className="w-3.5 h-3.5 text-black stroke-[3]" />}
+                </div>
               </div>
             )}
 
             {/* Selected overlay badge */}
             {isSelected && (
-              <div className="absolute top-2 right-2 z-10 bg-white text-black text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider animate-in zoom-in-50 duration-150">
+              <div className="absolute top-2 right-2 z-10 bg-white text-black text-[8px] sm:text-[9px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full uppercase tracking-wider animate-in zoom-in-50 duration-150">
                 Selected
               </div>
             )}

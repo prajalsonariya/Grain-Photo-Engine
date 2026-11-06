@@ -366,35 +366,36 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
   return (
     <div className="min-h-screen bg-[#111111] text-[#e5e5e5] font-sans pb-32">
       {/* Top Breadcrumb & Actions Bar */}
-      <div className="border-b border-white/10 bg-[#141414] sticky top-0 z-40 relative">
+      <div className="border-b border-white/10 bg-[#141414] sticky top-0 z-40 relative pt-[env(safe-area-inset-top,0px)]">
         {isLoadingFolder && (
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-white/20 overflow-hidden">
             <div className="h-full bg-white w-1/3 animate-pulse" />
           </div>
         )}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-hidden">
             <button 
               onClick={handleBack}
-              className="p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 sm:p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-colors cursor-pointer active:scale-90"
               title="Go back"
+              aria-label="Go back"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-2 text-xs font-mono truncate">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-mono truncate">
               <Link href="/studio" className="text-neutral-500 hover:text-neutral-300">Studio</Link>
               {breadcrumbs.map((b, idx) => {
                 const isLast = idx === breadcrumbs.length - 1;
                 const crumbKey = b.id || `crumb-${idx}`;
                 return (
-                  <div key={crumbKey} className="flex items-center gap-2 truncate">
+                  <div key={crumbKey} className="flex items-center gap-1.5 sm:gap-2 truncate">
                     <span className="text-neutral-600">/</span>
                     {isLast ? (
-                      <span className="text-white font-bold truncate">{b.name}</span>
+                      <span className="text-white font-bold truncate max-w-[120px] sm:max-w-none">{b.name}</span>
                     ) : (
                       <button 
                         onClick={() => navigateToFolder(b.id, b.name)}
-                        className="text-neutral-400 hover:text-white transition-colors truncate cursor-pointer"
+                        className="text-neutral-400 hover:text-white transition-colors truncate max-w-[80px] sm:max-w-none cursor-pointer"
                       >
                         {b.name}
                       </button>
@@ -406,18 +407,20 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
           </div>
 
           {/* Quick Header Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             <button
               onClick={() => setIsSubfolderModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold uppercase tracking-wider text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold uppercase tracking-wider text-neutral-300 hover:text-white transition-colors cursor-pointer active:scale-95"
+              title="Create new subfolder"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">New Subfolder</span>
+              <span className="hidden md:inline">New Subfolder</span>
             </button>
 
             <button
               onClick={copyShareLink}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold uppercase tracking-wider text-neutral-300 hover:text-white transition-colors cursor-pointer"
+              className="p-2 sm:px-3 sm:py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold uppercase tracking-wider text-neutral-300 hover:text-white transition-colors cursor-pointer active:scale-95 flex items-center gap-1.5"
+              title="Copy client share link"
             >
               {copiedLink ? <CheckCheck className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">{copiedLink ? "Copied" : "Copy Link"}</span>
@@ -427,7 +430,8 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
               href={whatsappAlbumHref}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-xs font-bold uppercase tracking-wider text-emerald-400 transition-colors cursor-pointer"
+              className="p-2 sm:px-3 sm:py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-xs font-bold uppercase tracking-wider text-emerald-400 transition-colors cursor-pointer active:scale-95 flex items-center gap-1.5"
+              title="Share album via WhatsApp"
             >
               <MessageCircle className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">WhatsApp</span>
@@ -437,7 +441,7 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
               href={`/${username}/gallery/${targetFolderId}`}
               target="_blank"
               rel="noreferrer"
-              className="p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-colors"
+              className="p-2 hover:bg-white/10 rounded-lg text-neutral-400 hover:text-white transition-colors active:scale-95"
               title="View Public Presentation"
             >
               <ExternalLink className="w-4 h-4" />
@@ -446,25 +450,25 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 space-y-8">
-        {/* Drag & Drop Upload Zone */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-5 sm:pt-8 space-y-6 sm:space-y-8">
+        {/* Upload Action Zone - Mobile-First Responsive */}
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-8 sm:p-12 flex flex-col items-center justify-center cursor-pointer transition-colors ${
+          className={`border-2 border-dashed rounded-xl p-5 sm:p-12 flex flex-col items-center justify-center cursor-pointer transition-colors active:scale-[0.99] ${
             isDragging 
               ? "border-white bg-white/10" 
               : "border-white/15 bg-[#161616] hover:border-white/30 hover:bg-[#1a1a1a]"
           }`}
         >
-          <UploadCloud className={`w-10 h-10 mb-3 ${isDragging ? "text-white" : "text-neutral-400"}`} />
-          <h3 className="text-white font-bold tracking-wider uppercase text-sm sm:text-base mb-1">
-            Drag & Drop Photos or Entire Folders Here
+          <UploadCloud className={`w-8 h-8 sm:w-10 sm:h-10 mb-2 sm:mb-3 ${isDragging ? "text-white" : "text-neutral-400"}`} />
+          <h3 className="text-white font-bold tracking-wider uppercase text-xs sm:text-base mb-1 text-center">
+            Tap or Drag to Upload Photos & Videos
           </h3>
-          <p className="text-xs text-neutral-400">
-            or click to browse from your device. Streams directly into Google Drive with zero compression.
+          <p className="text-[11px] sm:text-xs text-neutral-400 text-center">
+            Streams directly into Google Drive with zero compression.
           </p>
           <input 
             type="file"
@@ -484,16 +488,16 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
             <h4 className="text-xs font-mono uppercase tracking-widest text-neutral-500 font-bold">
               Subfolders ({subfolders.length})
             </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
               {subfolders.map(sub => (
                 <div
                   key={sub.id}
                   onClick={() => navigateToFolder(sub.id, sub.name)}
                   onMouseEnter={() => prefetchFolder(sub.id, "studio")}
                   onTouchStart={() => prefetchFolder(sub.id, "studio")}
-                  className="flex items-center gap-3 p-3.5 bg-[#161616] border border-white/10 hover:border-white/25 rounded-lg transition-colors group cursor-pointer active:scale-[0.98]"
+                  className="flex items-center gap-2.5 sm:gap-3 p-3 sm:p-3.5 bg-[#161616] border border-white/10 hover:border-white/25 rounded-lg transition-colors group cursor-pointer active:scale-[0.98]"
                 >
-                  <Folder className="w-5 h-5 text-neutral-400 group-hover:text-white flex-shrink-0" />
+                  <Folder className="w-4 h-4 sm:w-5 sm:h-5 text-neutral-400 group-hover:text-white flex-shrink-0" />
                   <span className="text-xs font-semibold text-neutral-200 group-hover:text-white truncate">
                     {sub.name}
                   </span>
@@ -504,10 +508,10 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
         )}
 
         {/* Media Grid Header & Multi-select trigger */}
-        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+        <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <h4 className="text-xs font-mono uppercase tracking-widest text-neutral-400 font-bold">
-              Photos & Media ({images.length})
+              Media ({images.length})
             </h4>
           </div>
 
@@ -517,22 +521,22 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
                 setSelectionMode(!selectionMode);
                 setSelectedIds(new Set());
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-colors cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-wider transition-colors cursor-pointer active:scale-95 ${
                 selectionMode ? "bg-white text-black font-bold" : "bg-white/5 text-neutral-400 hover:text-white border border-white/10"
               }`}
             >
-              {selectionMode ? "Cancel Select" : "Select"}
+              {selectionMode ? "Cancel" : "Select"}
             </button>
           </div>
         </div>
 
         {/* Media Grid */}
         {images.length === 0 ? (
-          <div className="py-24 text-center border border-white/5 rounded-xl bg-neutral-900/20 text-neutral-500 text-xs font-mono tracking-widest uppercase">
-            No media in this album yet. Drop photos above to start uploading.
+          <div className="py-20 sm:py-24 text-center border border-white/5 rounded-xl bg-neutral-900/20 text-neutral-500 text-xs font-mono tracking-widest uppercase">
+            No media in this album yet. Tap above to start uploading.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1.5 sm:gap-3">
             {images.map((img, index) => {
               const isSelected = selectedIds.has(img.id);
 
@@ -618,21 +622,21 @@ export default function FolderExplorerClient({ folder: initialFolder, initialSub
 
       {/* Floating Multi-Select Bottom Bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-6 py-3 bg-[#1c1c1c] border border-white/20 rounded-full shadow-2xl font-sans">
-          <span className="text-xs font-mono font-bold text-white">
+        <div className="fixed bottom-[max(16px,env(safe-area-inset-bottom,16px))] left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-3 px-4 sm:px-6 py-2.5 sm:py-3 bg-[#1c1c1c] border border-white/20 rounded-full shadow-2xl font-sans w-[calc(100%-24px)] max-w-sm">
+          <span className="text-xs font-mono font-bold text-white pl-1">
             {selectedIds.size} selected
           </span>
           <button
             onClick={handleBatchDelete}
             disabled={isDeletingBatch}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white rounded-full text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white rounded-full text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer active:scale-95"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            Delete Selected
+            <span>Delete</span>
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="text-xs text-neutral-400 hover:text-white transition-colors"
+            className="text-xs text-neutral-400 hover:text-white transition-colors pr-1"
           >
             Clear
           </button>

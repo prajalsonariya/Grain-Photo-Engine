@@ -23,7 +23,7 @@ export default function FolderCard({ folder, basePath = '/gallery', username = n
       onClick={handleClick}
       onMouseEnter={handlePrefetch}
       onTouchStart={handlePrefetch}
-      className="group relative block overflow-hidden rounded-md bg-neutral-900 aspect-square sm:aspect-[4/3] border border-white/5 hover:border-white/25 transition-all duration-300 shadow-xl cursor-pointer"
+      className="group relative block overflow-hidden rounded-md bg-neutral-900 aspect-square sm:aspect-[4/3] border border-white/5 hover:border-white/25 transition-all duration-300 shadow-xl cursor-pointer active:scale-[0.98]"
     >
       {folder.thumbnailUrl && (
         <img 
@@ -37,14 +37,14 @@ export default function FolderCard({ folder, basePath = '/gallery', username = n
       )}
 
       {/* Elegant high-contrast vignette (0 blur, pure hardware acceleration) */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10 group-hover:from-black/75 group-hover:via-black/15 group-hover:to-transparent transition-opacity duration-300" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10 group-hover:from-black/75 group-hover:via-black/15 group-hover:to-transparent transition-opacity duration-300" />
 
       {/* Folder metadata */}
-      <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-5 z-10 pointer-events-none">
-        <h3 className="text-white text-sm sm:text-base md:text-lg font-bold tracking-[0.12em] uppercase transition-transform duration-300 drop-shadow-md group-hover:translate-x-1">
+      <div className="absolute inset-0 flex flex-col justify-end p-3 sm:p-5 z-10 pointer-events-none">
+        <h3 className="text-white text-xs sm:text-base md:text-lg font-bold tracking-[0.1em] sm:tracking-[0.12em] uppercase transition-transform duration-300 drop-shadow-md group-hover:translate-x-1 line-clamp-2">
           {folder.name}
         </h3>
-        <span className="text-[10px] text-white/50 tracking-[0.2em] uppercase font-mono mt-1 group-hover:text-white/90 transition-colors">
+        <span className="text-[9px] sm:text-[10px] text-white/50 tracking-[0.2em] uppercase font-mono mt-0.5 sm:mt-1 group-hover:text-white/90 transition-colors">
           View Album →
         </span>
       </div>

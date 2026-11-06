@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye, Loader2 } from 'lucide-react';
+import { X, Camera as CameraIcon, Calendar, Aperture, Clock, Settings2, Download, ChevronLeft, ChevronRight, Eye, Loader2, Info } from 'lucide-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams } from 'next/navigation';
@@ -14,11 +14,15 @@ function WhatsAppIcon({ className }) {
   );
 }
 
-export default function Lightbox({ images, currentIndex, onClose, onIndexChange, whatsapp }) {
-  const { username } = useParams() || {};
+export default function Lightbox({ images, currentIndex, onClose, onIndexChange, whatsapp, username: propUsername }) {
+  const params = useParams() || {};
+  const username = propUsername || params.username;
   const [mounted, setMounted] = useState(typeof window !== 'undefined');
-  const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchStartY, setTouchStartY] = useState(null);
+  const [touchCurrentY, setTouchCurrentY] = useState(null);
+  const [showControls, setShowControls] = useState(true);
+  const [showInfoDrawer, setShowInfoDrawer] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
   const [originalLoaded, setOriginalLoaded] = useState(false);
   const [isOriginalLoading, setIsOriginalLoading] = useState(false);
@@ -48,6 +52,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowRight') handleNext();
       if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'i' || e.key === 'I') setShowInfoDrawer(prev => !prev);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -80,22 +85,39 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
   }, [currentIndex, images]);
 
   const handleTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    if (e.touches.length === 1) {
+      setTouchStartX(e.touches[0].clientX);
+      setTouchStartY(e.touches[0].clientY);
+      setTouchCurrentY(e.touches[0].clientY);
+    }
   };
 
   const handleTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    if (e.touches.length === 1) {
+      setTouchCurrentY(e.touches[0].clientY);
+    }
   };
 
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
+  const handleTouchEnd = (e) => {
+    if (touchStartX === null || touchStartY === null || touchCurrentY === null) return;
+    const diffX = touchStartX - (e.changedTouches[0]?.clientX || touchStartX);
+    const diffY = (e.changedTouches[0]?.clientY || touchCurrentY) - touchStartY;
 
-    if (isLeftSwipe) handleNext();
-    if (isRightSwipe) handlePrev();
+    // Swipe down to dismiss (like iOS Photos / Google Photos)
+    if (diffY > 90 && Math.abs(diffX) < 80) {
+      onClose();
+      return;
+    }
+
+    // Horizontal swipe between photos
+    if (Math.abs(diffX) > 45 && Math.abs(diffY) < 60) {
+      if (diffX > 0) handleNext();
+      else handlePrev();
+    }
+
+    setTouchStartX(null);
+    setTouchStartY(null);
+    setTouchCurrentY(null);
   };
 
   const image = images[currentIndex];
@@ -145,25 +167,30 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
 
   const content = (
     <div
-      className="fixed inset-0 z-[9999] bg-[#0c0c0c] flex flex-col justify-between overflow-hidden"
+      className="fixed inset-0 z-[9999] bg-[#0c0c0c] flex flex-col justify-between overflow-hidden select-none"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Fixed Top Bar */}
-      <div className="fixed top-0 left-0 right-0 z-[10001] h-16 px-4 sm:px-8 flex items-center justify-between pointer-events-none">
-        <div className="text-xs font-mono text-white/60 pointer-events-auto">
+      {/* Top Bar with Safe Area Top padding */}
+      <div 
+        className={`fixed top-0 left-0 right-0 z-[10001] pt-[max(12px,env(safe-area-inset-top,12px))] pb-3 px-4 sm:px-8 flex items-center justify-between transition-all duration-300 ${
+          showControls ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 -translate-y-4 pointer-events-none'
+        }`}
+      >
+        <div className="text-xs font-mono text-white/70 bg-black/50 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-none">
           {currentIndex + 1} / {images.length}
         </div>
         <button
           onClick={onClose}
           aria-label="Close full screen"
-          className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all pointer-events-auto cursor-pointer shadow-lg active:scale-95"
+          className="p-2 sm:p-2.5 rounded-full bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all cursor-pointer shadow-lg active:scale-90"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
+      {/* Desktop Prev / Next Navigation Arrows */}
       <button
         onClick={handlePrev}
         className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 z-50 text-white/40 hover:text-white transition-all p-4 hidden sm:block active:scale-95 cursor-pointer"
@@ -178,11 +205,17 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
         <ChevronRight className="w-8 h-8" />
       </button>
 
-      {/* Main Image Frame - Stable, Zero-Flicker (keeps DOM node mounted, no re-mount tearing) */}
-      <div className="flex-1 w-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-12 h-full max-h-[100dvh] pt-16">
-        <div className="relative w-full flex-1 flex items-center justify-center min-h-0 mb-4 group">
+      {/* Main Viewport Container */}
+      <div 
+        onClick={() => setShowControls(prev => !prev)}
+        className="flex-1 w-full flex items-center justify-center p-2 sm:p-6 lg:p-12 h-full max-h-[100dvh] pt-14 sm:pt-16 pb-20 sm:pb-28 cursor-pointer relative"
+      >
+        <div className="relative w-full h-full flex items-center justify-center min-h-0">
           {image.type === 'embed' ? (
-            <div className="w-full h-full max-w-5xl max-h-[80vh] aspect-video drop-shadow-2xl bg-black">
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="w-full h-full max-w-5xl max-h-[80vh] aspect-video drop-shadow-2xl bg-black"
+            >
               <iframe
                 src={image.embedUrl}
                 className="w-full h-full"
@@ -195,6 +228,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
               src={image.url}
               controls
               autoPlay
+              onClick={(e) => e.stopPropagation()}
               className="max-w-full max-h-full object-contain drop-shadow-2xl"
             />
           ) : (
@@ -214,27 +248,146 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
             />
           )}
         </div>
+      </div>
 
-        {/* Action Controls Bar */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 mb-6 shrink-0 w-full sm:w-auto px-4 z-10 font-sans">
+      {/* ── MOBILE BOTTOM NATIVE ACTION DOCK (sm:hidden) ─────────────────── */}
+      <div 
+        className={`fixed bottom-0 left-0 right-0 z-[10001] bg-[#141414] border-t border-white/10 pb-[max(12px,env(safe-area-inset-bottom,12px))] pt-2.5 px-3 flex items-center justify-around transition-all duration-300 sm:hidden ${
+          showControls ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-12 pointer-events-none'
+        }`}
+      >
+        {/* WhatsApp Share */}
+        <a
+          href={whatsappShareHref}
+          target="_blank"
+          rel="noreferrer"
+          onClick={handleCopyAndShareWhatsApp}
+          className="flex flex-col items-center justify-center gap-1 py-1 px-3 text-emerald-400 active:scale-90 transition-transform"
+        >
+          <WhatsAppIcon className="w-5 h-5" />
+          <span className="text-[10px] font-mono tracking-wider">{copied ? 'Copied!' : 'Share'}</span>
+        </a>
+
+        {/* Download Button */}
+        <a
+          href={(image.url || '').includes('?') ? `${image.url}&download=true` : `${image.url}?download=true`}
+          download={image.name}
+          className="flex flex-col items-center justify-center gap-1 py-1 px-3 text-white active:scale-90 transition-transform"
+        >
+          <Download className="w-5 h-5" />
+          <span className="text-[10px] font-mono tracking-wider">Save</span>
+        </a>
+
+        {/* 4K Original Master Toggle */}
+        {image.type !== 'video' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleRequestOriginal(); }}
+            className={`flex flex-col items-center justify-center gap-1 py-1 px-3 active:scale-90 transition-transform ${
+              showOriginal && originalLoaded 
+                ? 'text-emerald-400' 
+                : isOriginalLoading 
+                  ? 'text-amber-400' 
+                  : 'text-neutral-300'
+            }`}
+          >
+            {isOriginalLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Eye className="w-5 h-5" />
+            )}
+            <span className="text-[10px] font-mono tracking-wider">
+              {showOriginal && originalLoaded ? '✓ 4K' : isOriginalLoading ? 'Loading' : '4K+'}
+            </span>
+          </button>
+        )}
+
+        {/* EXIF Info Drawer Toggle */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowInfoDrawer(prev => !prev); }}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-3 active:scale-90 transition-transform ${
+            showInfoDrawer ? 'text-white' : 'text-neutral-400'
+          }`}
+        >
+          <Info className="w-5 h-5" />
+          <span className="text-[10px] font-mono tracking-wider">Info</span>
+        </button>
+
+        {/* RAW Download (if available) */}
+        {image.rawFileId && (
+          <a
+            href={`/api/image/${username || 'guest'}/${image.rawFileId}?download=true&filename=${encodeURIComponent(image.rawFileName || 'RAW_file')}`}
+            download={image.rawFileName || `RAW_${image.name}`}
+            className="flex flex-col items-center justify-center gap-1 py-1 px-3 text-amber-300 active:scale-90 transition-transform"
+          >
+            <Download className="w-5 h-5" />
+            <span className="text-[10px] font-mono tracking-wider">RAW</span>
+          </a>
+        )}
+      </div>
+
+      {/* ── MOBILE EXIF INFO DRAWER SHEET (sm:hidden) ────────────────────── */}
+      {showInfoDrawer && (
+        <div 
+          onClick={() => setShowInfoDrawer(false)}
+          className="fixed inset-0 z-[10002] bg-black/60 sm:hidden flex flex-col justify-end"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-[#181818] border-t border-white/15 rounded-t-2xl p-5 pb-[max(20px,env(safe-area-inset-bottom,20px))] space-y-4 shadow-2xl animate-in slide-in-from-bottom duration-200"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <span className="text-xs font-mono uppercase tracking-widest text-white font-bold">Photo Details</span>
+              <button 
+                onClick={() => setShowInfoDrawer(false)}
+                className="p-1 rounded-full text-neutral-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 text-xs font-mono text-neutral-300">
+              <div className="truncate text-white font-semibold">{image.name}</div>
+              {image.description && (
+                <p className="text-xs text-neutral-400 font-sans">{image.description}</p>
+              )}
+              <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] text-neutral-400">
+                {dateStr && <div>📅 {dateStr}</div>}
+                {meta.cameraMake && <div>📷 {meta.cameraMake} {meta.cameraModel}</div>}
+                {meta.focalLength && <div>🔭 {meta.focalLength}mm</div>}
+                {meta.aperture && <div>⭕ f/{meta.aperture}</div>}
+                {meta.exposureTime && <div>⏱️ {formatExposure(meta.exposureTime)}</div>}
+                {meta.isoSpeed && <div>⚡ ISO {meta.isoSpeed}</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DESKTOP CONTROLS & EXIF BAR (hidden sm:flex) ─────────────────── */}
+      <div 
+        className={`hidden sm:flex flex-col items-center fixed bottom-0 left-0 right-0 z-[10001] pb-6 pt-4 bg-gradient-to-t from-black via-black/80 to-transparent transition-all duration-300 ${
+          showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className="flex items-center gap-3 mb-4 shrink-0 px-4 z-10 font-sans">
           {/* Download Master Button */}
           <a
             href={(image.url || '').includes('?') ? `${image.url}&download=true` : `${image.url}?download=true`}
             download={image.name}
-            className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 bg-white hover:bg-neutral-200 text-black text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-colors rounded-sm sm:min-w-[180px] active:scale-95 cursor-pointer"
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-neutral-200 text-black text-xs uppercase tracking-[0.2em] font-medium transition-colors rounded-sm min-w-[180px] active:scale-95 cursor-pointer shadow"
           >
             <Download className="w-4 h-4" />
             {image.type === 'video' ? 'Download Video' : 'Download Photo'}
           </a>
 
-          {/* Share to WhatsApp Native Link (Unblockable by Safari/Chrome pop-up guard) */}
+          {/* Share to WhatsApp Native Link */}
           <a
             href={whatsappShareHref}
             target="_blank"
             rel="noreferrer"
             onClick={handleCopyAndShareWhatsApp}
             title="Share direct photo link via WhatsApp"
-            className={`flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium transition-all rounded-sm sm:min-w-[180px] active:scale-95 cursor-pointer ${
+            className={`flex items-center justify-center gap-2 px-6 py-3 border text-xs uppercase tracking-[0.2em] font-medium transition-all rounded-sm min-w-[180px] active:scale-95 cursor-pointer shadow ${
               copied
                 ? 'border-emerald-500/60 bg-emerald-500/20 text-emerald-300'
                 : 'border-emerald-500/30 text-emerald-400 hover:text-white hover:bg-emerald-500/20 hover:border-emerald-500/50'
@@ -248,7 +401,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
           {!showOriginal && image.type !== 'video' && (
             <button
               onClick={handleRequestOriginal}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/20 text-white/90 hover:text-white hover:bg-white/10 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium transition-colors rounded-sm sm:min-w-[180px] active:scale-95 cursor-pointer"
+              className="flex items-center justify-center gap-2 px-6 py-3 border border-white/20 text-white/90 hover:text-white hover:bg-white/10 text-[10px] uppercase tracking-[0.2em] font-medium transition-colors rounded-sm min-w-[180px] active:scale-95 cursor-pointer"
             >
               <Eye className="w-4 h-4" />
               View Original (4K+)
@@ -256,14 +409,14 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
           )}
 
           {showOriginal && isOriginalLoading && (
-            <div className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/20 text-white/80 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium rounded-sm sm:min-w-[180px]">
+            <div className="flex items-center justify-center gap-2 px-6 py-3 border border-white/20 text-white/80 text-[10px] uppercase tracking-[0.2em] font-medium rounded-sm min-w-[180px]">
               <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
               Buffering Master...
             </div>
           )}
 
           {showOriginal && originalLoaded && (
-            <div className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-mono rounded-sm sm:min-w-[180px]">
+            <div className="flex items-center justify-center gap-2 px-6 py-3 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px] uppercase tracking-[0.2em] font-mono rounded-sm min-w-[180px]">
               ✓ Original Master
             </div>
           )}
@@ -273,7 +426,7 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
             <a
               href={`/api/image/${username || 'guest'}/${image.rawFileId}?download=true&filename=${encodeURIComponent(image.rawFileName || 'RAW_file')}`}
               download={image.rawFileName || `RAW_${image.name}`}
-              className="flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 border border-white/10 text-white/70 hover:text-white text-[9px] sm:text-[10px] uppercase tracking-[0.2em] font-medium hover:bg-white/5 transition-colors rounded-sm sm:min-w-[180px]"
+              className="flex items-center justify-center gap-2 px-6 py-3 border border-white/10 text-white/70 hover:text-white text-[10px] uppercase tracking-[0.2em] font-medium hover:bg-white/5 transition-colors rounded-sm min-w-[180px]"
             >
               <Download className="w-3 h-3" />
               Download RAW
@@ -281,8 +434,8 @@ export default function Lightbox({ images, currentIndex, onClose, onIndexChange,
           )}
         </div>
 
-        {/* Camera EXIF Metadata Strip */}
-        <div className="w-full shrink-0 border-t border-white/10 pt-4 pb-2 px-4 flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-neutral-400 z-10 font-mono">
+        {/* Desktop EXIF Strip */}
+        <div className="w-full shrink-0 border-t border-white/10 pt-3 pb-1 px-4 flex flex-wrap justify-center items-center gap-x-6 gap-y-2 text-[10px] uppercase tracking-[0.2em] text-neutral-400 z-10 font-mono">
           {image.description && (
             <div className="w-full text-center text-neutral-300 mb-1 tracking-[0.1em] font-sans font-light">
               {image.description}

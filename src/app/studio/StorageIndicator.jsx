@@ -25,21 +25,24 @@ export default function StorageIndicator() {
 
   if (loading || !quota) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-white/[0.02] text-[11px] text-neutral-500 font-mono">
-        <Cloud className="w-3.5 h-3.5 animate-pulse" />
-        <span>Drive Storage: syncing...</span>
+      <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full border border-white/5 bg-white/[0.02] text-[10px] sm:text-[11px] text-neutral-500 font-mono">
+        <Cloud className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-pulse" />
+        <span className="hidden sm:inline">Drive: syncing...</span>
       </div>
     );
   }
 
   return (
-    <div className="relative overflow-hidden flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-white/10 bg-[#161616] text-[11px] text-neutral-300 font-mono shadow-sm">
-      <HardDrive className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-      <span className="whitespace-nowrap">
+    <div 
+      title={`Google Drive Storage: ${quota.usageFormatted} of ${quota.limitFormatted} used`}
+      className="relative overflow-hidden flex items-center gap-1.5 sm:gap-2.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full border border-white/10 bg-[#161616] text-[10px] sm:text-[11px] text-neutral-300 font-mono shadow-sm"
+    >
+      <HardDrive className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-neutral-400 shrink-0" />
+      <span className="whitespace-nowrap hidden sm:inline">
         {quota.usageFormatted} / {quota.limitFormatted}
       </span>
       {quota.percentUsed !== null && (
-        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+        <span className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.2 sm:py-0.5 rounded font-bold ${
           quota.percentUsed > 90 ? "bg-red-500/20 text-red-400" : "bg-white/10 text-neutral-300"
         }`}>
           {quota.percentUsed}%

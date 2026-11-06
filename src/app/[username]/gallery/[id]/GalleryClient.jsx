@@ -308,13 +308,13 @@ export default function GalleryClient({
         </div>
       )}
 
-      <div className="flex flex-col gap-8 relative z-10">
+      <div className="flex flex-col gap-6 sm:gap-8 relative z-10">
         {sortedSubfolders.length > 0 && (
-          <div className="mb-4">
-            <h2 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-[0.3em] mb-4">
+          <div className="mb-2 sm:mb-4">
+            <h2 className="text-[10px] sm:text-xs text-neutral-500 uppercase tracking-[0.25em] sm:tracking-[0.3em] mb-3 sm:mb-4">
               Folders ({sortedSubfolders.length})
             </h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
               {sortedSubfolders.map((f, index) => (
                 <FolderCard 
                   key={f.id} 
@@ -331,10 +331,10 @@ export default function GalleryClient({
 
         {images.length > 0 && (
           <>
-            <div className="flex items-center justify-between gap-4 py-4 border-y border-white/10 bg-neutral-950/95 sticky top-[80px] z-40 -mx-4 px-4 sm:mx-0 sm:px-4 rounded-none sm:rounded-sm">
+            <div className="flex items-center justify-between gap-3 py-3 sm:py-4 border-y border-white/10 bg-neutral-950/95 sticky top-14 sm:top-20 z-40 -mx-3 px-3 sm:mx-0 sm:px-4 rounded-none sm:rounded-sm">
               <button
                 onClick={toggleSelectionMode}
-                className={`flex items-center gap-2 px-4 py-2 text-[10px] sm:text-xs uppercase tracking-[0.2em] font-medium rounded-sm transition-all duration-200 whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.2em] font-medium rounded-sm transition-all duration-200 whitespace-nowrap cursor-pointer active:scale-95 ${
                   selectionMode
                     ? 'bg-white text-black hover:bg-neutral-200'
                     : 'border border-white/15 text-neutral-400 hover:text-white hover:border-white/30'

@@ -15,22 +15,22 @@ export default function HomeClient({ folders = [], heroTitle = 'Albums', usernam
   }, [folders, username]);
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 pt-32 pb-24 min-h-screen flex flex-col relative z-10">
-      <div className="mb-12 max-w-2xl">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight uppercase">
+    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 pt-20 sm:pt-28 md:pt-32 pb-24 min-h-screen flex flex-col relative z-10">
+      <div className="mb-6 sm:mb-12 max-w-2xl">
+        <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-tight uppercase">
           {heroTitle}
         </h1>
-        <p className="text-xs text-neutral-400 uppercase tracking-[0.2em] mt-2 font-mono">
+        <p className="text-xs text-neutral-400 uppercase tracking-[0.2em] mt-1.5 sm:mt-2 font-mono">
           {folders.length} {folders.length === 1 ? 'Collection' : 'Collections'}
         </p>
       </div>
 
       {folders.length === 0 ? (
-        <div className="py-28 text-center border border-white/5 rounded-lg bg-neutral-900/20">
+        <div className="py-20 sm:py-28 text-center border border-white/5 rounded-lg bg-neutral-900/20">
           <p className="text-neutral-500 text-xs tracking-[0.25em] uppercase font-mono">No collections found</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8">
           {folders.map(folder => (
             <FolderCard 
               key={folder.id} 

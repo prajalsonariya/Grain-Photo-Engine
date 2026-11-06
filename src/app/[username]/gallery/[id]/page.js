@@ -65,13 +65,13 @@ export default async function GalleryPage({ params }) {
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-200 font-sans selection:bg-white/20 selection:text-white">
       <Header config={user} isAgency={plan === 'agency'} homeUrl={`/${username}`} />
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 pt-32 pb-24 min-h-screen">
-        <div className="mb-8 flex flex-col items-start gap-4">
-          <Link href={`/${username}`} className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors text-[10px] sm:text-xs uppercase tracking-[0.3em]">
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-6 pt-18 sm:pt-28 md:pt-32 pb-24 min-h-screen">
+        <div className="mb-6 sm:mb-8 flex flex-col items-start gap-3 sm:gap-4">
+          <Link href={`/${username}`} className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors text-[10px] sm:text-xs uppercase tracking-[0.25em] sm:tracking-[0.3em]">
             <ArrowLeft className="w-4 h-4" />
             Back to Collections
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-light text-white tracking-[0.2em] uppercase">
+          <h1 className="text-xl sm:text-3xl font-light text-white tracking-[0.15em] sm:tracking-[0.2em] uppercase truncate max-w-full">
             {folder?.name || 'Gallery'}
           </h1>
         </div>
